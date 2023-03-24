@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using Microsoft.SemanticKernel.AI.Abstract;
 using Microsoft.SemanticKernel.SemanticFunctions;
 
 namespace Microsoft.SemanticKernel.AI;
@@ -9,7 +10,7 @@ namespace Microsoft.SemanticKernel.AI;
 /// <summary>
 /// Settings for a completion request.
 /// </summary>
-public class CompleteRequestSettings
+public class CompleteRequestSettings : ISKBackendSettings
 {
     /// <summary>
     /// Temperature controls the randomness of the completion. The higher the temperature, the more random the completion.

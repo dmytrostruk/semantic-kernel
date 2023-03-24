@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel.AI;
+using Microsoft.SemanticKernel.AI.Abstract;
 using Microsoft.SemanticKernel.SkillDefinition;
 
 namespace Microsoft.SemanticKernel.Orchestration;
@@ -37,11 +38,6 @@ public interface ISKFunction
     public bool IsSemantic { get; }
 
     /// <summary>
-    /// AI backend settings
-    /// </summary>
-    public CompleteRequestSettings RequestSettings { get; }
-
-    /// <summary>
     /// Returns a description of the function, including parameters.
     /// </summary>
     /// <returns>An instance of <see cref="FunctionView"/> describing the function</returns>
@@ -52,14 +48,14 @@ public interface ISKFunction
     /// </summary>
     /// <param name="input">String input</param>
     /// <param name="context">SK context</param>
-    /// <param name="settings">LLM completion settings</param>
+    /// <param name="settings">LLM request settings</param>
     /// <param name="log">Application logger</param>
     /// <param name="cancel">Cancellation token</param>
     /// <returns>The updated context, potentially a new one if context switching is implemented.</returns>
     Task<SKContext> InvokeAsync(
         string input,
         SKContext? context = null,
-        CompleteRequestSettings? settings = null,
+        ISKBackendSettings? settings = null,
         ILogger? log = null,
         CancellationToken? cancel = null);
 
@@ -73,7 +69,7 @@ public interface ISKFunction
     /// <returns>The updated context, potentially a new one if context switching is implemented.</returns>
     Task<SKContext> InvokeAsync(
         SKContext? context = null,
-        CompleteRequestSettings? settings = null,
+        ISKBackendSettings? settings = null,
         ILogger? log = null,
         CancellationToken? cancel = null);
 
@@ -91,12 +87,12 @@ public interface ISKFunction
     /// </summary>
     /// <param name="backendFactory">AI backend factory</param>
     /// <returns>Self instance</returns>
-    ISKFunction SetAIBackend(Func<ITextCompletionClient> backendFactory);
+    ISKFunction SetAIBackend(Func<ISKBackend> backendFactory);
 
     /// <summary>
-    /// Set the AI completion settings used with LLM requests
+    /// Set the AI settings used with LLM requests
     /// </summary>
-    /// <param name="settings">LLM completion settings</param>
+    /// <param name="settings">LLM settings</param>
     /// <returns>Self instance</returns>
-    ISKFunction SetAIConfiguration(CompleteRequestSettings settings);
+    ISKFunction SetAIConfiguration(ISKBackendSettings settings);
 }

@@ -1,8 +1,10 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.SemanticKernel.AI.Abstract;
 using Microsoft.SemanticKernel.AI.OpenAI.Clients;
 using Microsoft.SemanticKernel.AI.OpenAI.HttpSchema;
 using Microsoft.SemanticKernel.Diagnostics;
@@ -14,7 +16,7 @@ namespace Microsoft.SemanticKernel.AI.OpenAI.Services;
 /// <summary>
 /// Azure OpenAI text completion client.
 /// </summary>
-public sealed class AzureTextCompletion : AzureOpenAIClientAbstract, ITextCompletionClient
+public sealed class AzureTextCompletion : AzureOpenAIClientAbstract, ISKBackend
 {
     /// <summary>
     /// Creates a new AzureTextCompletion client instance
@@ -50,36 +52,38 @@ public sealed class AzureTextCompletion : AzureOpenAIClientAbstract, ITextComple
     /// <summary>
     /// Creates a completion for the provided prompt and parameters
     /// </summary>
-    /// <param name="text">Text to complete</param>
-    /// <param name="requestSettings">Request settings for the completion API</param>
+    /// <param name="input">Text to complete</param>
+    /// <param name="settings">Request settings for the completion API</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The completed text.</returns>
     /// <exception cref="AIException">AIException thrown during the request</exception>
-    public async Task<string> CompleteAsync(string text, CompleteRequestSettings requestSettings, CancellationToken cancellationToken = default)
+    public async Task<string> InvokeAsync(string input, ISKBackendSettings settings, CancellationToken cancellationToken = default)
     {
-        Verify.NotNull(requestSettings, "Completion settings cannot be empty");
+        var completionSettings = settings as CompleteRequestSettings;
+
+        Verify.NotNull(completionSettings, "Completion settings cannot be empty");
 
         var deploymentName = await this.GetDeploymentNameAsync(this._modelId);
         var url = $"{this.Endpoint}/openai/deployments/{deploymentName}/completions?api-version={this.AzureOpenAIApiVersion}";
 
         this.Log.LogDebug("Sending Azure OpenAI completion request to {0}", url);
 
-        if (requestSettings.MaxTokens < 1)
+        if (completionSettings.MaxTokens < 1)
         {
             throw new AIException(
                 AIException.ErrorCodes.InvalidRequest,
-                $"MaxTokens {requestSettings.MaxTokens} is not valid, the value must be greater than zero");
+                $"MaxTokens {completionSettings.MaxTokens} is not valid, the value must be greater than zero");
         }
 
         var requestBody = Json.Serialize(new AzureCompletionRequest
         {
-            Prompt = text,
-            Temperature = requestSettings.Temperature,
-            TopP = requestSettings.TopP,
-            PresencePenalty = requestSettings.PresencePenalty,
-            FrequencyPenalty = requestSettings.FrequencyPenalty,
-            MaxTokens = requestSettings.MaxTokens,
-            Stop = requestSettings.StopSequences is { Count: > 0 } ? requestSettings.StopSequences : null,
+            Prompt = input,
+            Temperature = completionSettings.Temperature,
+            TopP = completionSettings.TopP,
+            PresencePenalty = completionSettings.PresencePenalty,
+            FrequencyPenalty = completionSettings.FrequencyPenalty,
+            MaxTokens = completionSettings.MaxTokens,
+            Stop = completionSettings.StopSequences is { Count: > 0 } ? completionSettings.StopSequences : null,
         });
 
         return await this.ExecuteCompleteRequestAsync(url, requestBody, cancellationToken);
