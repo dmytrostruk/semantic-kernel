@@ -10,7 +10,7 @@ namespace Microsoft.SemanticKernel.AI;
 /// <summary>
 /// Settings for a completion request.
 /// </summary>
-public class CompleteRequestSettings : ISKBackendSettings
+public class CompleteRequestSettings
 {
     /// <summary>
     /// Temperature controls the randomness of the completion. The higher the temperature, the more random the completion.
@@ -41,22 +41,4 @@ public class CompleteRequestSettings : ISKBackendSettings
     /// Sequences where the completion will stop generating further tokens.
     /// </summary>
     public IList<string> StopSequences { get; set; } = Array.Empty<string>();
-
-    /// <summary>
-    /// Create a new settings object with the values from another settings object.
-    /// </summary>
-    /// <param name="config"></param>
-    /// <returns>An instance of <see cref="CompleteRequestSettings"/> </returns>
-    public static CompleteRequestSettings FromCompletionConfig(PromptTemplateConfig.CompletionConfig config)
-    {
-        return new CompleteRequestSettings
-        {
-            Temperature = config.Temperature,
-            TopP = config.TopP,
-            PresencePenalty = config.PresencePenalty,
-            FrequencyPenalty = config.FrequencyPenalty,
-            MaxTokens = config.MaxTokens,
-            StopSequences = config.StopSequences,
-        };
-    }
 }

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -55,7 +56,7 @@ public interface ISKFunction
     Task<SKContext> InvokeAsync(
         string input,
         SKContext? context = null,
-        ISKBackendSettings? settings = null,
+        IDictionary<string, object>? settings = null,
         ILogger? log = null,
         CancellationToken? cancel = null);
 
@@ -69,7 +70,7 @@ public interface ISKFunction
     /// <returns>The updated context, potentially a new one if context switching is implemented.</returns>
     Task<SKContext> InvokeAsync(
         SKContext? context = null,
-        ISKBackendSettings? settings = null,
+        IDictionary<string, object>? settings = null,
         ILogger? log = null,
         CancellationToken? cancel = null);
 
@@ -94,5 +95,5 @@ public interface ISKFunction
     /// </summary>
     /// <param name="settings">LLM settings</param>
     /// <returns>Self instance</returns>
-    ISKFunction SetAIConfiguration(ISKBackendSettings settings);
+    ISKFunction SetAIConfiguration(IDictionary<string, object> settings);
 }

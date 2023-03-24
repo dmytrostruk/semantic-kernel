@@ -251,7 +251,7 @@ public sealed class Kernel : IKernel, IDisposable
         // is invoked manually without a context and without a way to find other functions.
         func.SetDefaultSkillCollection(this.Skills);
 
-        func.SetAIConfiguration(CompleteRequestSettings.FromCompletionConfig(functionConfig.PromptTemplateConfig.Completion));
+        func.SetAIConfiguration(functionConfig.PromptTemplateConfig.BackendSettings);
 
         // TODO: allow to postpone this (e.g. use lazy init), allow to create semantic functions without a default backend
         var backend = this._config.GetCompletionBackend(functionConfig.PromptTemplateConfig.DefaultBackends.FirstOrDefault());

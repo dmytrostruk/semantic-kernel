@@ -50,14 +50,14 @@ public static class InlineFunctionsDefinitionExtension
         {
             Description = description ?? "Generic function, unknown purpose",
             Type = "completion",
-            Completion = new PromptTemplateConfig.CompletionConfig
+            BackendSettings = new Dictionary<string, object>
             {
-                Temperature = temperature,
-                TopP = topP,
-                PresencePenalty = presencePenalty,
-                FrequencyPenalty = frequencyPenalty,
-                MaxTokens = maxTokens,
-                StopSequences = stopSequences?.ToList() ?? new List<string>()
+                { "Temperature", temperature },
+                { "TopP", topP },
+                { "PresencePenalty", presencePenalty },
+                { "FrequencyPenalty", frequencyPenalty },
+                { "MaxTokens", maxTokens },
+                { "StopSequences", stopSequences?.ToList() ?? new List<string>() }
             }
         };
 

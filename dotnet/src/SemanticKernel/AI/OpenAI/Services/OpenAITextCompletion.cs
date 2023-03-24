@@ -1,11 +1,13 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System;
+using System.Collections.Generic;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel.AI.Abstract;
+using Microsoft.SemanticKernel.AI.Extensions;
 using Microsoft.SemanticKernel.AI.OpenAI.Clients;
 using Microsoft.SemanticKernel.AI.OpenAI.HttpSchema;
 using Microsoft.SemanticKernel.Diagnostics;
@@ -56,9 +58,9 @@ public sealed class OpenAITextCompletion : OpenAIClientAbstract, ISKBackend
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The completed text</returns>
     /// <exception cref="AIException">AIException thrown during the request</exception>
-    public async Task<string> InvokeAsync(string input, ISKBackendSettings settings, CancellationToken cancellationToken = default)
+    public async Task<string> InvokeAsync(string input, IDictionary<string, object> settings, CancellationToken cancellationToken = default)
     {
-        var completionSettings = settings as CompleteRequestSettings;
+        var completionSettings = settings.ToObject<CompleteRequestSettings>();
 
         Verify.NotNull(completionSettings, "Completion settings cannot be empty");
 

@@ -44,7 +44,11 @@ public static class SemanticKernelExtensions
             var config = new PromptTemplateConfig
             {
                 // Assuming this prompt will be used for completions, set some settings like the number of tokens
-                Completion = new PromptTemplateConfig.CompletionConfig { Temperature = 0.5, MaxTokens = 100, },
+                BackendSettings = new Dictionary<string, object>
+                {
+                    { "Temperature", 0.5 },
+                    { "MaxTokens", 100 }
+                },
                 // A list of backend aliases that the consumer should provide when running this prompt
                 DefaultBackends = new List<string> { "text-davinci-003" }
             };

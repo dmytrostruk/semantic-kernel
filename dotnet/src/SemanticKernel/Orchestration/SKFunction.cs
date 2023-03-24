@@ -38,7 +38,7 @@ public sealed class SKFunction : ISKFunction, IDisposable
     public bool IsSemantic { get; }
 
     /// <inheritdoc/>
-    public ISKBackendSettings? RequestSettings
+    public IDictionary<string, object>? RequestSettings
     {
         get { return this._aiRequestSettings; }
     }
@@ -101,7 +101,7 @@ public sealed class SKFunction : ISKFunction, IDisposable
 
         async Task<SKContext> LocalFunc(
             ISKBackend backend,
-            ISKBackendSettings requestSettings,
+            IDictionary<string, object> requestSettings,
             SKContext context)
         {
             Verify.NotNull(backend, "AI LLM backend is empty");
@@ -150,7 +150,7 @@ public sealed class SKFunction : ISKFunction, IDisposable
     public Task<SKContext> InvokeAsync(
         string input,
         SKContext? context = null,
-        ISKBackendSettings? settings = null,
+        IDictionary<string, object>? settings = null,
         ILogger? log = null,
         CancellationToken? cancel = null)
     {
@@ -174,7 +174,7 @@ public sealed class SKFunction : ISKFunction, IDisposable
     /// <inheritdoc/>
     public Task<SKContext> InvokeAsync(
         SKContext? context = null,
-        ISKBackendSettings? settings = null,
+        IDictionary<string, object>? settings = null,
         ILogger? log = null,
         CancellationToken? cancel = null)
     {
@@ -207,7 +207,7 @@ public sealed class SKFunction : ISKFunction, IDisposable
     }
 
     /// <inheritdoc/>
-    public ISKFunction SetAIConfiguration(ISKBackendSettings settings)
+    public ISKFunction SetAIConfiguration(IDictionary<string, object> settings)
     {
         Verify.NotNull(settings, "AI LLM settings are empty");
         this.VerifyIsSemantic();
@@ -239,7 +239,7 @@ public sealed class SKFunction : ISKFunction, IDisposable
     private readonly ILogger _log;
     private IReadOnlySkillCollection? _skillCollection;
     private ISKBackend? _aiBackend;
-    private ISKBackendSettings? _aiRequestSettings;
+    private IDictionary<string, object>? _aiRequestSettings;
 
     private struct MethodDetails
     {
@@ -324,7 +324,7 @@ public sealed class SKFunction : ISKFunction, IDisposable
     }
 
     // Run the semantic function
-    private async Task<SKContext> InvokeSemanticAsync(SKContext context, ISKBackendSettings? settings)
+    private async Task<SKContext> InvokeSemanticAsync(SKContext context, IDictionary<string, object>? settings)
     {
         this.VerifyIsSemantic();
 
@@ -332,7 +332,7 @@ public sealed class SKFunction : ISKFunction, IDisposable
 
         settings ??= this._aiRequestSettings;
 
-        var callable = (Func<ISKBackend?, ISKBackendSettings?, SKContext, Task<SKContext>>)this._function;
+        var callable = (Func<ISKBackend?, IDictionary<string, object>?, SKContext, Task<SKContext>>)this._function;
         context.Variables.Update((await callable(this._aiBackend, settings, context)).Variables);
         return context;
     }
