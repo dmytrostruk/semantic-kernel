@@ -38,9 +38,9 @@ public sealed class SKFunction : ISKFunction, IDisposable
     public bool IsSemantic { get; }
 
     /// <inheritdoc/>
-    public IDictionary<string, object>? RequestSettings
+    public IDictionary<string, object> BackendSettings
     {
-        get { return this._aiRequestSettings; }
+        get { return this._backendSettings; }
     }
 
     /// <summary>
@@ -211,7 +211,7 @@ public sealed class SKFunction : ISKFunction, IDisposable
     {
         Verify.NotNull(settings, "AI LLM settings are empty");
         this.VerifyIsSemantic();
-        this._aiRequestSettings = settings;
+        this._backendSettings = settings;
         return this;
     }
 
@@ -239,7 +239,7 @@ public sealed class SKFunction : ISKFunction, IDisposable
     private readonly ILogger _log;
     private IReadOnlySkillCollection? _skillCollection;
     private ISKBackend? _aiBackend;
-    private IDictionary<string, object>? _aiRequestSettings;
+    private IDictionary<string, object> _backendSettings = new Dictionary<string, object>();
 
     private struct MethodDetails
     {
@@ -330,7 +330,7 @@ public sealed class SKFunction : ISKFunction, IDisposable
 
         this.EnsureContextHasSkills(context);
 
-        settings ??= this._aiRequestSettings;
+        settings ??= this._backendSettings;
 
         var callable = (Func<ISKBackend?, IDictionary<string, object>?, SKContext, Task<SKContext>>)this._function;
         context.Variables.Update((await callable(this._aiBackend, settings, context)).Variables);

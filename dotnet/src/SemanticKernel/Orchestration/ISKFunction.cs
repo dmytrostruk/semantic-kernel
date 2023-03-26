@@ -39,6 +39,11 @@ public interface ISKFunction
     public bool IsSemantic { get; }
 
     /// <summary>
+    /// AI backend settings
+    /// </summary>
+    public IDictionary<string, object> BackendSettings { get; }
+
+    /// <summary>
     /// Returns a description of the function, including parameters.
     /// </summary>
     /// <returns>An instance of <see cref="FunctionView"/> describing the function</returns>
