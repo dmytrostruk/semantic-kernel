@@ -33,6 +33,36 @@ public sealed class KernelConfig
     public ILogger Logger { get; private set; } = NullLogger.Instance;
 
     /// <summary>
+    /// Adds instance of <see cref="ISKBackend"/> to the kernel configuration.
+    /// </summary>
+    /// <param name="label">An identifier used to map semantic functions to backend,
+    /// decoupling prompts configurations from the actual model used.</param>
+    /// <param name="backendFactory">Delegate for backend initialization.</param>
+    /// <param name="overwrite">Whether to overwrite an existing configuration if the same name exists.</param>
+    /// <returns></returns>
+    /// <exception cref="KernelException"></exception>
+    public KernelConfig AddBackend(string label, Func<ISKBackend> backendFactory, bool overwrite = false)
+    {
+        Verify.NotEmpty(label, "The backend label is empty");
+
+        if (!overwrite && this.Backends.ContainsKey(label))
+        {
+            throw new KernelException(
+                KernelException.ErrorCodes.InvalidBackendConfiguration,
+                $"A backend already exists for the label: {label}");
+        }
+
+        this.Backends[label] = backendFactory.Invoke();
+
+        if (this.Backends.Count == 1)
+        {
+            this._defaultBackend = label;
+        }
+
+        return this;
+    }
+
+    /// <summary>
     /// Adds an Azure OpenAI backend to the list.
     /// See https://learn.microsoft.com/azure/cognitive-services/openai for service details.
     /// </summary>
@@ -47,21 +77,9 @@ public sealed class KernelConfig
     public KernelConfig AddAzureOpenAICompletionBackend(
         string label, string deploymentName, string endpoint, string apiKey, string apiVersion = "2022-12-01", bool overwrite = false)
     {
-        Verify.NotEmpty(label, "The backend label is empty");
-
-        if (!overwrite && this.Backends.ContainsKey(label))
-        {
-            throw new KernelException(
-                KernelException.ErrorCodes.InvalidBackendConfiguration,
-                $"A backend already exists for the label: {label}");
-        }
-
-        this.Backends[label] = new AzureTextCompletion(deploymentName, endpoint, apiKey, apiVersion, this.Logger, this.HttpHandlerFactory);
-
-        if (this.Backends.Count == 1)
-        {
-            this._defaultBackend = label;
-        }
+        this.AddBackend(label,
+            () => new AzureTextCompletion(deploymentName, endpoint, apiKey, apiVersion, this.Logger, this.HttpHandlerFactory),
+            overwrite);
 
         return this;
     }
@@ -80,21 +98,9 @@ public sealed class KernelConfig
     public KernelConfig AddOpenAICompletionBackend(
         string label, string modelId, string apiKey, string? orgId = null, bool overwrite = false)
     {
-        Verify.NotEmpty(label, "The backend label is empty");
-
-        if (!overwrite && this.Backends.ContainsKey(label))
-        {
-            throw new KernelException(
-                KernelException.ErrorCodes.InvalidBackendConfiguration,
-                $"A backend already exists for the label: {label}");
-        }
-
-        this.Backends[label] = new OpenAITextCompletion(modelId, apiKey, orgId, this.Logger, this.HttpHandlerFactory);
-
-        if (this.Backends.Count == 1)
-        {
-            this._defaultBackend = label;
-        }
+        this.AddBackend(label,
+            () => new OpenAITextCompletion(modelId, apiKey, orgId, this.Logger, this.HttpHandlerFactory),
+            overwrite);
 
         return this;
     }
@@ -114,21 +120,9 @@ public sealed class KernelConfig
     public KernelConfig AddAzureOpenAIEmbeddingsBackend(
         string label, string deploymentName, string endpoint, string apiKey, string apiVersion = "2022-12-01", bool overwrite = false)
     {
-        Verify.NotEmpty(label, "The backend label is empty");
-
-        if (!overwrite && this.Backends.ContainsKey(label))
-        {
-            throw new KernelException(
-                KernelException.ErrorCodes.InvalidBackendConfiguration,
-                $"A backend already exists for the label: {label}");
-        }
-
-        this.Backends[label] = new AzureTextEmbeddings(deploymentName, endpoint, apiKey, apiVersion, this.Logger, this.HttpHandlerFactory);
-
-        if (this.Backends.Count == 1)
-        {
-            this._defaultBackend = label;
-        }
+        this.AddBackend(label,
+            () => new AzureTextEmbeddings(deploymentName, endpoint, apiKey, apiVersion, this.Logger, this.HttpHandlerFactory),
+            overwrite);
 
         return this;
     }
@@ -147,21 +141,9 @@ public sealed class KernelConfig
     public KernelConfig AddOpenAIEmbeddingsBackend(
         string label, string modelId, string apiKey, string? orgId = null, bool overwrite = false)
     {
-        Verify.NotEmpty(label, "The backend label is empty");
-
-        if (!overwrite && this.Backends.ContainsKey(label))
-        {
-            throw new KernelException(
-                KernelException.ErrorCodes.InvalidBackendConfiguration,
-                $"An backend already exists for the label: {label}");
-        }
-
-        this.Backends[label] = new OpenAITextEmbeddings(modelId, apiKey, orgId, this.Logger, this.HttpHandlerFactory);
-
-        if (this.Backends.Count == 1)
-        {
-            this._defaultBackend = label;
-        }
+        this.AddBackend(label,
+            () => new OpenAITextEmbeddings(modelId, apiKey, orgId, this.Logger, this.HttpHandlerFactory),
+            overwrite);
 
         return this;
     }
