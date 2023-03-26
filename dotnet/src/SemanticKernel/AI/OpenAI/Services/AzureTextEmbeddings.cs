@@ -64,6 +64,7 @@ public sealed class AzureTextEmbeddings : AzureOpenAIClientAbstract, IEmbeddingG
         return embeddings;
     }
 
+    /// <inheritdoc/>
     public async Task<string> InvokeAsync(string input, IDictionary<string, object> settings, CancellationToken cancellationToken = default)
     {
         var result = await this.GenerateEmbeddingsAsync(new List<string> { input });

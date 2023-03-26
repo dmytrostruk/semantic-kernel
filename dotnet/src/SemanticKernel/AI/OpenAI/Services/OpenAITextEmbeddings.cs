@@ -58,6 +58,7 @@ public sealed class OpenAITextEmbeddings : OpenAIClientAbstract, IEmbeddingGener
         return await this.ExecuteEmbeddingRequestAsync(OpenaiEmbeddingEndpoint, requestBody);
     }
 
+    /// <inheritdoc/>
     public async Task<string> InvokeAsync(string input, IDictionary<string, object> settings, CancellationToken cancellationToken = default)
     {
         var result = await this.GenerateEmbeddingsAsync(new List<string> { input });
