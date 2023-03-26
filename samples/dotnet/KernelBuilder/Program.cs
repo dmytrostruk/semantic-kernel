@@ -96,7 +96,7 @@ kernel7.Config
     .AddAzureOpenAIEmbeddingsBackend("myName2", "embeddingsDeploymentName1", "https://...", "apiKey", "2022-12-01")
     .AddAzureOpenAIEmbeddingsBackend("myName3", "embeddingsDeploymentName2", "https://...", "apiKey", "2022-12-01")
     .AddOpenAICompletionBackend("myName4", "text-davinci-003", "sk-...")
-    .SetDefaultEmbeddingsBackend("myName3");
+    .SetDefaultBackend("myName3");
 
 // ==========================================================================================================
 // When invoking AI, by default the kernel will retry on transient errors, such as throttling and timeouts.

@@ -3,6 +3,7 @@
 using System;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.SemanticKernel.AI.Abstract;
 using Microsoft.SemanticKernel.AI.Embeddings;
 using Microsoft.SemanticKernel.Configuration;
 using Microsoft.SemanticKernel.Diagnostics;
@@ -46,6 +47,8 @@ public sealed class KernelBuilder
         {
             this._config.SetHttpRetryHandlerFactory(this._httpHandlerFactory);
         }
+
+        this._config.SetLogger(this._log);
 
         var instance = new Kernel(
             new SkillCollection(this._log),

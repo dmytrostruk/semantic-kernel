@@ -20,7 +20,7 @@ public static class Example05_CombineLLMPromptsAndNativeCode
         // OpenAI settings
         kernel.Config.AddOpenAICompletionBackend("text-davinci-002", "text-davinci-002", Env.Var("OPENAI_API_KEY"));
         kernel.Config.AddOpenAICompletionBackend("text-davinci-003", "text-davinci-003", Env.Var("OPENAI_API_KEY"));
-        kernel.Config.SetDefaultCompletionBackend("text-davinci-003");
+        kernel.Config.SetDefaultBackend("text-davinci-003");
 
         // Load native skill
         using var bingConnector = new BingConnector(Env.Var("BING_API_KEY"));

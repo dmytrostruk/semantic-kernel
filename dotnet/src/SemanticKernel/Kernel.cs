@@ -254,35 +254,9 @@ public sealed class Kernel : IKernel, IDisposable
         func.SetAIConfiguration(functionConfig.PromptTemplateConfig.BackendSettings);
 
         // TODO: allow to postpone this (e.g. use lazy init), allow to create semantic functions without a default backend
-        var backend = this._config.GetCompletionBackend(functionConfig.PromptTemplateConfig.DefaultBackends.FirstOrDefault());
+        var backend = this._config.GetBackend(functionConfig.PromptTemplateConfig.DefaultBackends.FirstOrDefault());
 
-        switch (backend)
-        {
-            case AzureOpenAIConfig azureBackendConfig:
-                func.SetAIBackend(() => new AzureTextCompletion(
-                    azureBackendConfig.DeploymentName,
-                    azureBackendConfig.Endpoint,
-                    azureBackendConfig.APIKey,
-                    azureBackendConfig.APIVersion,
-                    this._log,
-                    this._config.HttpHandlerFactory));
-                break;
-
-            case OpenAIConfig openAiConfig:
-                func.SetAIBackend(() => new OpenAITextCompletion(
-                    openAiConfig.ModelId,
-                    openAiConfig.APIKey,
-                    openAiConfig.OrgId,
-                    this._log,
-                    this._config.HttpHandlerFactory));
-                break;
-
-            default:
-                throw new AIException(
-                    AIException.ErrorCodes.InvalidConfiguration,
-                    $"Unknown/unsupported backend configuration type {backend.GetType():G}, unable to prepare semantic function. " +
-                    $"Function description: {functionConfig.PromptTemplateConfig.Description}");
-        }
+        func.SetAIBackend(() => backend);
 
         return func;
     }

@@ -1,8 +1,10 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.SemanticKernel.AI.Abstract;
 using Microsoft.SemanticKernel.AI.Embeddings;
 using Microsoft.SemanticKernel.AI.OpenAI.Clients;
 using Microsoft.SemanticKernel.AI.OpenAI.HttpSchema;
@@ -15,7 +17,7 @@ namespace Microsoft.SemanticKernel.AI.OpenAI.Services;
 /// <summary>
 /// Azure OpenAI text embedding service.
 /// </summary>
-public sealed class AzureTextEmbeddings : AzureOpenAIClientAbstract, IEmbeddingGenerator<string, float>
+public sealed class AzureTextEmbeddings : AzureOpenAIClientAbstract, IEmbeddingGenerator<string, float>, ISKBackend
 {
     private readonly string _modelId;
 
@@ -60,5 +62,12 @@ public sealed class AzureTextEmbeddings : AzureOpenAIClientAbstract, IEmbeddingG
         }
 
         return embeddings;
+    }
+
+    public async Task<string> InvokeAsync(string input, IDictionary<string, object> settings, CancellationToken cancellationToken = default)
+    {
+        var result = await this.GenerateEmbeddingsAsync(new List<string> { input });
+
+        return Json.Serialize(result);
     }
 }

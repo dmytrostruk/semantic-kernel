@@ -50,7 +50,7 @@ public sealed class OpenAICompletionTests : IDisposable
             modelId: openAIConfiguration.ModelId,
             apiKey: openAIConfiguration.ApiKey);
 
-        target.Config.SetDefaultCompletionBackend(openAIConfiguration.Label);
+        target.Config.SetDefaultBackend(openAIConfiguration.Label);
 
         IDictionary<string, ISKFunction> skill = GetSkill("ChatSkill", target);
 
@@ -79,7 +79,7 @@ public sealed class OpenAICompletionTests : IDisposable
             endpoint: azureOpenAIConfiguration.Endpoint,
             apiKey: azureOpenAIConfiguration.ApiKey);
 
-        target.Config.SetDefaultCompletionBackend(azureOpenAIConfiguration.Label);
+        target.Config.SetDefaultBackend(azureOpenAIConfiguration.Label);
 
         IDictionary<string, ISKFunction> skill = GetSkill("ChatSkill", target);
 

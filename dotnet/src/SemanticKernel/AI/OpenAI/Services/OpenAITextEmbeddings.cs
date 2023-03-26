@@ -2,8 +2,10 @@
 
 using System.Collections.Generic;
 using System.Net.Http.Headers;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.SemanticKernel.AI.Abstract;
 using Microsoft.SemanticKernel.AI.Embeddings;
 using Microsoft.SemanticKernel.AI.OpenAI.Clients;
 using Microsoft.SemanticKernel.AI.OpenAI.HttpSchema;
@@ -16,7 +18,7 @@ namespace Microsoft.SemanticKernel.AI.OpenAI.Services;
 /// <summary>
 /// Client to OpenAI.com embedding endpoint, used to generate embeddings.
 /// </summary>
-public sealed class OpenAITextEmbeddings : OpenAIClientAbstract, IEmbeddingGenerator<string, float>
+public sealed class OpenAITextEmbeddings : OpenAIClientAbstract, IEmbeddingGenerator<string, float>, ISKBackend
 {
     // 3P OpenAI REST API endpoint
     private const string OpenaiEndpoint = "https://api.openai.com/v1";
@@ -54,5 +56,12 @@ public sealed class OpenAITextEmbeddings : OpenAIClientAbstract, IEmbeddingGener
         var requestBody = Json.Serialize(new OpenAIEmbeddingRequest { Model = this._modelId, Input = data, });
 
         return await this.ExecuteEmbeddingRequestAsync(OpenaiEmbeddingEndpoint, requestBody);
+    }
+
+    public async Task<string> InvokeAsync(string input, IDictionary<string, object> settings, CancellationToken cancellationToken = default)
+    {
+        var result = await this.GenerateEmbeddingsAsync(new List<string> { input });
+
+        return Json.Serialize(result);
     }
 }
