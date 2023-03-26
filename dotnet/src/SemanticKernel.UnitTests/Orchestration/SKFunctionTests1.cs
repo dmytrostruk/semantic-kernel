@@ -32,8 +32,7 @@ public sealed class SKFunctionTests1
         var skFunction = SKFunction.FromSemanticConfig("sk", "name", functionConfig);
 
         // Assert
-        Assert.Equal(0, skFunction.RequestSettings.Temperature);
-        Assert.Equal(100, skFunction.RequestSettings.MaxTokens);
+        Assert.NotNull(skFunction.BackendSettings);
     }
 
     [Fact]
@@ -43,31 +42,31 @@ public sealed class SKFunctionTests1
         var templateConfig = new PromptTemplateConfig();
         var functionConfig = new SemanticFunctionConfig(templateConfig, this._promptTemplate.Object);
         var skFunction = SKFunction.FromSemanticConfig("sk", "name", functionConfig);
-        var settings = new CompleteRequestSettings
+        var settings = new Dictionary<string, object>
         {
-            Temperature = 0.9,
-            MaxTokens = 2001,
+            { "Temperature", 0.9 },
+            { "MaxTokens", 2001 }
         };
 
         // Act
-        skFunction.RequestSettings.Temperature = 1.3;
-        skFunction.RequestSettings.MaxTokens = 130;
+        skFunction.BackendSettings["Temperature"] = 1.3;
+        skFunction.BackendSettings["MaxTokens"] = 130;
 
         // Assert
-        Assert.Equal(1.3, skFunction.RequestSettings.Temperature);
-        Assert.Equal(130, skFunction.RequestSettings.MaxTokens);
+        Assert.Equal(1.3, skFunction.BackendSettings["Temperature"]);
+        Assert.Equal(130, skFunction.BackendSettings["MaxTokens"]);
 
         // Act
-        skFunction.RequestSettings.Temperature = 0.7;
+        skFunction.BackendSettings["Temperature"] = 0.7;
 
         // Assert
-        Assert.Equal(0.7, skFunction.RequestSettings.Temperature);
+        Assert.Equal(0.7, skFunction.BackendSettings["Temperature"]);
 
         // Act
         skFunction.SetAIConfiguration(settings);
 
         // Assert
-        Assert.Equal(settings.Temperature, skFunction.RequestSettings.Temperature);
-        Assert.Equal(settings.MaxTokens, skFunction.RequestSettings.MaxTokens);
+        Assert.Equal(settings["Temperature"], skFunction.BackendSettings["Temperature"]);
+        Assert.Equal(settings["MaxTokens"], skFunction.BackendSettings["MaxTokens"]);
     }
 }

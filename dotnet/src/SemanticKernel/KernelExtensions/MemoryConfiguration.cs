@@ -1,10 +1,7 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.Diagnostics.CodeAnalysis;
-using Microsoft.SemanticKernel.AI;
 using Microsoft.SemanticKernel.AI.Embeddings;
-using Microsoft.SemanticKernel.AI.OpenAI.Services;
-using Microsoft.SemanticKernel.Configuration;
 using Microsoft.SemanticKernel.Diagnostics;
 using Microsoft.SemanticKernel.Memory;
 
@@ -16,59 +13,14 @@ namespace Microsoft.SemanticKernel.KernelExtensions;
 public static class MemoryConfiguration
 {
     /// <summary>
-    /// Set the semantic memory to use the given memory storage. Uses the kernel's default embeddings backend.
-    /// </summary>
-    /// <param name="kernel">Kernel instance</param>
-    /// <param name="storage">Memory storage</param>
-    public static void UseMemory(this IKernel kernel, IMemoryStore<float> storage)
-    {
-        UseMemory(kernel, kernel.Config.DefaultEmbeddingsBackend, storage);
-    }
-
-    /// <summary>
     /// Set the semantic memory to use the given memory storage and embeddings backend.
     /// </summary>
     /// <param name="kernel">Kernel instance</param>
-    /// <param name="embeddingsBackendLabel">Kernel backend label for embedding generation</param>
     /// <param name="storage">Memory storage</param>
-    [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
-        Justification = "The embeddingGenerator object is disposed by the kernel")]
-    public static void UseMemory(this IKernel kernel, string? embeddingsBackendLabel, IMemoryStore<float> storage)
+    /// <param name="embeddingsBackendLabel">Kernel backend label for embedding generation</param>
+    public static void UseMemory(this IKernel kernel, IMemoryStore<float> storage, string? embeddingsBackendLabel = null)
     {
-        Verify.NotEmpty(embeddingsBackendLabel, "The embedding backend label is empty");
-
-        IBackendConfig embeddingsBackendCfg = kernel.Config.GetEmbeddingsBackend(embeddingsBackendLabel);
-
-        Verify.NotNull(embeddingsBackendCfg, $"AI configuration is missing for label: {embeddingsBackendLabel}");
-
-        IEmbeddingGenerator<string, float>? embeddingGenerator;
-
-        switch (embeddingsBackendCfg)
-        {
-            case AzureOpenAIConfig azureAIConfig:
-                embeddingGenerator = new AzureTextEmbeddings(
-                    azureAIConfig.DeploymentName,
-                    azureAIConfig.Endpoint,
-                    azureAIConfig.APIKey,
-                    azureAIConfig.APIVersion,
-                    kernel.Log,
-                    kernel.Config.HttpHandlerFactory);
-                break;
-
-            case OpenAIConfig openAIConfig:
-                embeddingGenerator = new OpenAITextEmbeddings(
-                    openAIConfig.ModelId,
-                    openAIConfig.APIKey,
-                    openAIConfig.OrgId,
-                    kernel.Log,
-                    kernel.Config.HttpHandlerFactory);
-                break;
-
-            default:
-                throw new AIException(
-                    AIException.ErrorCodes.InvalidConfiguration,
-                    $"Unknown/unsupported backend type {embeddingsBackendCfg.GetType():G}, unable to prepare semantic memory");
-        }
+        var embeddingGenerator = kernel.Config.GetBackend<IEmbeddingGenerator<string, float>>(embeddingsBackendLabel);
 
         UseMemory(kernel, embeddingGenerator, storage);
     }

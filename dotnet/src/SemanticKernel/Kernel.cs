@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel.AI;
-using Microsoft.SemanticKernel.AI.OpenAI.Services;
 using Microsoft.SemanticKernel.Configuration;
 using Microsoft.SemanticKernel.Diagnostics;
 using Microsoft.SemanticKernel.Memory;
@@ -250,38 +249,12 @@ public sealed class Kernel : IKernel, IDisposable
         // is invoked manually without a context and without a way to find other functions.
         func.SetDefaultSkillCollection(this.Skills);
 
-        func.SetAIConfiguration(CompleteRequestSettings.FromCompletionConfig(functionConfig.PromptTemplateConfig.Completion));
+        func.SetAIConfiguration(functionConfig.PromptTemplateConfig.BackendSettings);
 
         // TODO: allow to postpone this (e.g. use lazy init), allow to create semantic functions without a default backend
-        var backend = this._config.GetCompletionBackend(functionConfig.PromptTemplateConfig.DefaultBackends.FirstOrDefault());
+        var backend = this._config.GetBackend(functionConfig.PromptTemplateConfig.DefaultBackends.FirstOrDefault());
 
-        switch (backend)
-        {
-            case AzureOpenAIConfig azureBackendConfig:
-                func.SetAIBackend(() => new AzureTextCompletion(
-                    azureBackendConfig.DeploymentName,
-                    azureBackendConfig.Endpoint,
-                    azureBackendConfig.APIKey,
-                    azureBackendConfig.APIVersion,
-                    this._log,
-                    this._config.HttpHandlerFactory));
-                break;
-
-            case OpenAIConfig openAiConfig:
-                func.SetAIBackend(() => new OpenAITextCompletion(
-                    openAiConfig.ModelId,
-                    openAiConfig.APIKey,
-                    openAiConfig.OrgId,
-                    this._log,
-                    this._config.HttpHandlerFactory));
-                break;
-
-            default:
-                throw new AIException(
-                    AIException.ErrorCodes.InvalidConfiguration,
-                    $"Unknown/unsupported backend configuration type {backend.GetType():G}, unable to prepare semantic function. " +
-                    $"Function description: {functionConfig.PromptTemplateConfig.Description}");
-        }
+        func.SetAIBackend(() => backend);
 
         return func;
     }

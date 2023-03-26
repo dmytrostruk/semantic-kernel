@@ -88,7 +88,7 @@ internal static class SemanticKernelFactory
             kernel.RegisterNativeGraphSkills(graphToken.First());
         }
 
-        if (kernel.Config.DefaultEmbeddingsBackend != null)
+        if (kernel.Memory != null)
         {
             kernel.RegisterTextMemory();
         }

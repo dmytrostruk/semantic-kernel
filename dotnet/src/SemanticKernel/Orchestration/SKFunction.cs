@@ -9,7 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.SemanticKernel.AI;
+using Microsoft.SemanticKernel.AI.Abstract;
 using Microsoft.SemanticKernel.Diagnostics;
 using Microsoft.SemanticKernel.Memory;
 using Microsoft.SemanticKernel.SemanticFunctions;
@@ -37,9 +37,9 @@ public sealed class SKFunction : ISKFunction, IDisposable
     public bool IsSemantic { get; }
 
     /// <inheritdoc/>
-    public CompleteRequestSettings RequestSettings
+    public IDictionary<string, object> BackendSettings
     {
-        get { return this._aiRequestSettings; }
+        get { return this._backendSettings; }
     }
 
     /// <summary>
@@ -99,18 +99,18 @@ public sealed class SKFunction : ISKFunction, IDisposable
         Verify.NotNull(functionConfig, "Function configuration is empty");
 
         async Task<SKContext> LocalFunc(
-            ITextCompletionClient client,
-            CompleteRequestSettings requestSettings,
+            ISKBackend backend,
+            IDictionary<string, object> requestSettings,
             SKContext context)
         {
-            Verify.NotNull(client, "AI LLM backed is empty");
+            Verify.NotNull(backend, "AI LLM backend is empty");
 
             try
             {
                 string prompt = await functionConfig.PromptTemplate.RenderAsync(context);
 
-                string completion = await client.CompleteAsync(prompt, requestSettings, context.CancellationToken);
-                context.Variables.Update(completion);
+                string content = await backend.InvokeAsync(prompt, requestSettings, context.CancellationToken);
+                context.Variables.Update(content);
             }
             catch (Exception ex) when (!ex.IsCriticalException())
             {
@@ -149,7 +149,7 @@ public sealed class SKFunction : ISKFunction, IDisposable
     public Task<SKContext> InvokeAsync(
         string input,
         SKContext? context = null,
-        CompleteRequestSettings? settings = null,
+        IDictionary<string, object>? settings = null,
         ILogger? log = null,
         CancellationToken? cancel = null)
     {
@@ -173,7 +173,7 @@ public sealed class SKFunction : ISKFunction, IDisposable
     /// <inheritdoc/>
     public Task<SKContext> InvokeAsync(
         SKContext? context = null,
-        CompleteRequestSettings? settings = null,
+        IDictionary<string, object>? settings = null,
         ILogger? log = null,
         CancellationToken? cancel = null)
     {
@@ -197,20 +197,20 @@ public sealed class SKFunction : ISKFunction, IDisposable
     }
 
     /// <inheritdoc/>
-    public ISKFunction SetAIBackend(Func<ITextCompletionClient> backendFactory)
+    public ISKFunction SetAIBackend(Func<ISKBackend> backendFactory)
     {
-        Verify.NotNull(backendFactory, "AI LLM backed factory is empty");
+        Verify.NotNull(backendFactory, "AI LLM backend factory is empty");
         this.VerifyIsSemantic();
         this._aiBackend = backendFactory.Invoke();
         return this;
     }
 
     /// <inheritdoc/>
-    public ISKFunction SetAIConfiguration(CompleteRequestSettings settings)
+    public ISKFunction SetAIConfiguration(IDictionary<string, object> settings)
     {
-        Verify.NotNull(settings, "AI LLM request settings are empty");
+        Verify.NotNull(settings, "AI LLM settings are empty");
         this.VerifyIsSemantic();
-        this._aiRequestSettings = settings;
+        this._backendSettings = settings;
         return this;
     }
 
@@ -237,8 +237,8 @@ public sealed class SKFunction : ISKFunction, IDisposable
     private readonly Delegate _function;
     private readonly ILogger _log;
     private IReadOnlySkillCollection? _skillCollection;
-    private ITextCompletionClient? _aiBackend = null;
-    private CompleteRequestSettings _aiRequestSettings = new();
+    private ISKBackend? _aiBackend;
+    private IDictionary<string, object> _backendSettings = new Dictionary<string, object>();
 
     private struct MethodDetails
     {
@@ -323,15 +323,15 @@ public sealed class SKFunction : ISKFunction, IDisposable
     }
 
     // Run the semantic function
-    private async Task<SKContext> InvokeSemanticAsync(SKContext context, CompleteRequestSettings? settings)
+    private async Task<SKContext> InvokeSemanticAsync(SKContext context, IDictionary<string, object>? settings)
     {
         this.VerifyIsSemantic();
 
         this.EnsureContextHasSkills(context);
 
-        settings ??= this._aiRequestSettings;
+        settings ??= this._backendSettings;
 
-        var callable = (Func<ITextCompletionClient?, CompleteRequestSettings?, SKContext, Task<SKContext>>)this._function;
+        var callable = (Func<ISKBackend?, IDictionary<string, object>?, SKContext, Task<SKContext>>)this._function;
         context.Variables.Update((await callable(this._aiBackend, settings, context)).Variables);
         return context;
     }

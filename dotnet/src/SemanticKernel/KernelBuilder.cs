@@ -47,6 +47,8 @@ public sealed class KernelBuilder
             this._config.SetHttpRetryHandlerFactory(this._httpHandlerFactory);
         }
 
+        this._config.SetLogger(this._log);
+
         var instance = new Kernel(
             new SkillCollection(this._log),
             new PromptTemplateEngine(this._log),

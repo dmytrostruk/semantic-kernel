@@ -130,7 +130,7 @@ public sealed class Program
             throw new InvalidOperationException("'DefaultCompletionBackendLabel' is not set in configuration.");
         }
 
-        sk.Config.SetDefaultCompletionBackend(defaultCompletionBackendLabel);
+        sk.Config.SetDefaultBackend(defaultCompletionBackendLabel);
 
         string? currentAssemblyDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
         if (string.IsNullOrWhiteSpace(currentAssemblyDirectory))

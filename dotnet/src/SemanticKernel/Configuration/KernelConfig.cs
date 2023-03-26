@@ -3,6 +3,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.SemanticKernel.AI.Abstract;
 using Microsoft.SemanticKernel.AI.OpenAI.Services;
 using Microsoft.SemanticKernel.Diagnostics;
 using Microsoft.SemanticKernel.Reliability;
@@ -25,6 +28,41 @@ public sealed class KernelConfig
     public HttpRetryConfig DefaultHttpRetryConfig { get; private set; } = new();
 
     /// <summary>
+    /// Logger for backend clients.
+    /// </summary>
+    public ILogger Logger { get; private set; } = NullLogger.Instance;
+
+    /// <summary>
+    /// Adds instance of <see cref="ISKBackend"/> to the kernel configuration.
+    /// </summary>
+    /// <param name="label">An identifier used to map semantic functions to backend,
+    /// decoupling prompts configurations from the actual model used.</param>
+    /// <param name="backendFactory">Delegate for backend initialization.</param>
+    /// <param name="overwrite">Whether to overwrite an existing configuration if the same name exists.</param>
+    /// <returns></returns>
+    /// <exception cref="KernelException"></exception>
+    public KernelConfig AddBackend(string label, Func<ISKBackend> backendFactory, bool overwrite = false)
+    {
+        Verify.NotEmpty(label, "The backend label is empty");
+
+        if (!overwrite && this.Backends.ContainsKey(label))
+        {
+            throw new KernelException(
+                KernelException.ErrorCodes.InvalidBackendConfiguration,
+                $"A backend already exists for the label: {label}");
+        }
+
+        this.Backends[label] = backendFactory.Invoke();
+
+        if (this.Backends.Count == 1)
+        {
+            this._defaultBackend = label;
+        }
+
+        return this;
+    }
+
+    /// <summary>
     /// Adds an Azure OpenAI backend to the list.
     /// See https://learn.microsoft.com/azure/cognitive-services/openai for service details.
     /// </summary>
@@ -39,21 +77,9 @@ public sealed class KernelConfig
     public KernelConfig AddAzureOpenAICompletionBackend(
         string label, string deploymentName, string endpoint, string apiKey, string apiVersion = "2022-12-01", bool overwrite = false)
     {
-        Verify.NotEmpty(label, "The backend label is empty");
-
-        if (!overwrite && this.CompletionBackends.ContainsKey(label))
-        {
-            throw new KernelException(
-                KernelException.ErrorCodes.InvalidBackendConfiguration,
-                $"A completion backend already exists for the label: {label}");
-        }
-
-        this.CompletionBackends[label] = new AzureOpenAIConfig(label, deploymentName, endpoint, apiKey, apiVersion);
-
-        if (this.CompletionBackends.Count == 1)
-        {
-            this._defaultCompletionBackend = label;
-        }
+        this.AddBackend(label,
+            () => new AzureTextCompletion(deploymentName, endpoint, apiKey, apiVersion, this.Logger, this.HttpHandlerFactory),
+            overwrite);
 
         return this;
     }
@@ -72,21 +98,9 @@ public sealed class KernelConfig
     public KernelConfig AddOpenAICompletionBackend(
         string label, string modelId, string apiKey, string? orgId = null, bool overwrite = false)
     {
-        Verify.NotEmpty(label, "The backend label is empty");
-
-        if (!overwrite && this.CompletionBackends.ContainsKey(label))
-        {
-            throw new KernelException(
-                KernelException.ErrorCodes.InvalidBackendConfiguration,
-                $"A completion backend already exists for the label: {label}");
-        }
-
-        this.CompletionBackends[label] = new OpenAIConfig(label, modelId, apiKey, orgId);
-
-        if (this.CompletionBackends.Count == 1)
-        {
-            this._defaultCompletionBackend = label;
-        }
+        this.AddBackend(label,
+            () => new OpenAITextCompletion(modelId, apiKey, orgId, this.Logger, this.HttpHandlerFactory),
+            overwrite);
 
         return this;
     }
@@ -106,21 +120,9 @@ public sealed class KernelConfig
     public KernelConfig AddAzureOpenAIEmbeddingsBackend(
         string label, string deploymentName, string endpoint, string apiKey, string apiVersion = "2022-12-01", bool overwrite = false)
     {
-        Verify.NotEmpty(label, "The backend label is empty");
-
-        if (!overwrite && this.EmbeddingsBackends.ContainsKey(label))
-        {
-            throw new KernelException(
-                KernelException.ErrorCodes.InvalidBackendConfiguration,
-                $"An embeddings backend already exists for the label: {label}");
-        }
-
-        this.EmbeddingsBackends[label] = new AzureOpenAIConfig(label, deploymentName, endpoint, apiKey, apiVersion);
-
-        if (this.EmbeddingsBackends.Count == 1)
-        {
-            this._defaultEmbeddingsBackend = label;
-        }
+        this.AddBackend(label,
+            () => new AzureTextEmbeddings(deploymentName, endpoint, apiKey, apiVersion, this.Logger, this.HttpHandlerFactory),
+            overwrite);
 
         return this;
     }
@@ -139,49 +141,34 @@ public sealed class KernelConfig
     public KernelConfig AddOpenAIEmbeddingsBackend(
         string label, string modelId, string apiKey, string? orgId = null, bool overwrite = false)
     {
-        Verify.NotEmpty(label, "The backend label is empty");
-
-        if (!overwrite && this.EmbeddingsBackends.ContainsKey(label))
-        {
-            throw new KernelException(
-                KernelException.ErrorCodes.InvalidBackendConfiguration,
-                $"An embeddings backend already exists for the label: {label}");
-        }
-
-        this.EmbeddingsBackends[label] = new OpenAIConfig(label, modelId, apiKey, orgId);
-
-        if (this.EmbeddingsBackends.Count == 1)
-        {
-            this._defaultEmbeddingsBackend = label;
-        }
+        this.AddBackend(label,
+            () => new OpenAITextEmbeddings(modelId, apiKey, orgId, this.Logger, this.HttpHandlerFactory),
+            overwrite);
 
         return this;
     }
 
     /// <summary>
-    /// Check whether a given completion backend is in the configuration.
+    /// Check whether a given backend is in the configuration.
     /// </summary>
-    /// <param name="label">Name of completion backend to look for.</param>
+    /// <param name="label">Name of backend to look for.</param>
     /// <param name="condition">Optional condition that must be met for a backend to be deemed present.</param>
-    /// <returns><c>true</c> when a completion backend matching the giving label is present, <c>false</c> otherwise.</returns>
-    public bool HasCompletionBackend(string label, Func<IBackendConfig, bool>? condition = null)
+    /// <returns><c>true</c> when a backend matching the giving label is present, <c>false</c> otherwise.</returns>
+    public bool HasBackend(string label, Func<ISKBackend, bool>? condition = null)
     {
         return condition == null
-            ? this.CompletionBackends.ContainsKey(label)
-            : this.CompletionBackends.Any(x => x.Key == label && condition(x.Value));
+            ? this.Backends.ContainsKey(label)
+            : this.Backends.Any(x => x.Key == label && condition(x.Value));
     }
 
     /// <summary>
-    /// Check whether a given embeddings backend is in the configuration.
+    /// Check whether a given backend is in the configuration.
     /// </summary>
-    /// <param name="label">Name of embeddings backend to look for.</param>
-    /// <param name="condition">Optional condition that must be met for a backend to be deemed present.</param>
-    /// <returns><c>true</c> when an embeddings backend matching the giving label is present, <c>false</c> otherwise.</returns>
-    public bool HasEmbeddingsBackend(string label, Func<IBackendConfig, bool>? condition = null)
+    /// <param name="condition">Condition that must be met for a backend to be deemed present.</param>
+    /// <returns><c>true</c> when a backend matching the giving condition is present, <c>false</c> otherwise.</returns>
+    public bool HasBackend(Func<ISKBackend, bool> condition)
     {
-        return condition == null
-            ? this.EmbeddingsBackends.ContainsKey(label)
-            : this.EmbeddingsBackends.Any(x => x.Key == label && condition(x.Value));
+        return this.Backends.Any(x => condition(x.Value));
     }
 
     /// <summary>
@@ -199,6 +186,21 @@ public sealed class KernelConfig
         return this;
     }
 
+    /// <summary>
+    /// Set the logger to use for the kernel.
+    /// </summary>
+    /// <param name="logger"></param>
+    /// <returns></returns>
+    public KernelConfig SetLogger(ILogger logger)
+    {
+        if (logger != null)
+        {
+            this.Logger = logger;
+        }
+
+        return this;
+    }
+
     public KernelConfig SetDefaultHttpRetryConfig(HttpRetryConfig? httpRetryConfig)
     {
         if (httpRetryConfig != null)
@@ -211,192 +213,114 @@ public sealed class KernelConfig
     }
 
     /// <summary>
-    /// Set the default completion backend to use for the kernel.
+    /// Set the default backend to use for the kernel.
     /// </summary>
-    /// <param name="label">Label of completion backend to use.</param>
+    /// <param name="label">Label of backend to use.</param>
     /// <returns>The updated kernel configuration.</returns>
     /// <exception cref="KernelException">Thrown if the requested backend doesn't exist.</exception>
-    public KernelConfig SetDefaultCompletionBackend(string label)
+    public KernelConfig SetDefaultBackend(string label)
     {
-        if (!this.CompletionBackends.ContainsKey(label))
+        if (!this.Backends.ContainsKey(label))
         {
             throw new KernelException(
                 KernelException.ErrorCodes.BackendNotFound,
-                $"The completion backend doesn't exist with label: {label}");
+                $"The backend doesn't exist with label: {label}");
         }
 
-        this._defaultCompletionBackend = label;
+        this._defaultBackend = label;
         return this;
     }
 
     /// <summary>
-    /// Default completion backend.
+    /// Default backend.
     /// </summary>
-    public string? DefaultCompletionBackend => this._defaultCompletionBackend;
+    public string? DefaultBackend => this._defaultBackend;
 
     /// <summary>
-    /// Set the default embeddings backend to use for the kernel.
-    /// </summary>
-    /// <param name="label">Label of embeddings backend to use.</param>
-    /// <returns>The updated kernel configuration.</returns>
-    /// <exception cref="KernelException">Thrown if the requested backend doesn't exist.</exception>
-    public KernelConfig SetDefaultEmbeddingsBackend(string label)
-    {
-        if (!this.EmbeddingsBackends.ContainsKey(label))
-        {
-            throw new KernelException(
-                KernelException.ErrorCodes.BackendNotFound,
-                $"The embeddings backend doesn't exist with label: {label}");
-        }
-
-        this._defaultEmbeddingsBackend = label;
-        return this;
-    }
-
-    /// <summary>
-    /// Default embeddings backend.
-    /// </summary>
-    public string? DefaultEmbeddingsBackend => this._defaultEmbeddingsBackend;
-
-    /// <summary>
-    /// Get the completion backend configuration matching the given label or the default if a label is not provided or not found.
+    /// Get the backend matching the given label or the default if a label is not provided or not found.
     /// </summary>
     /// <param name="label">Optional label of the desired backend.</param>
-    /// <returns>The completion backend configuration matching the given label or the default.</returns>
+    /// <returns>The backend matching the given label or the default.</returns>
     /// <exception cref="KernelException">Thrown when no suitable backend is found.</exception>
-    public IBackendConfig GetCompletionBackend(string? label = null)
+    public ISKBackend GetBackend(string? label = null)
     {
         if (string.IsNullOrEmpty(label))
         {
-            if (this._defaultCompletionBackend == null)
+            if (this._defaultBackend == null)
             {
                 throw new KernelException(
                     KernelException.ErrorCodes.BackendNotFound,
-                    "A label was not provided and no default completion backend is available.");
+                    "A label was not provided and no default backend is available.");
             }
 
-            return this.CompletionBackends[this._defaultCompletionBackend];
+            return this.Backends[this._defaultBackend];
         }
 
-        if (this.CompletionBackends.TryGetValue(label, out IBackendConfig value))
+        if (this.Backends.TryGetValue(label, out ISKBackend value))
         {
             return value;
         }
 
-        if (this._defaultCompletionBackend != null)
+        if (this._defaultBackend != null)
         {
-            return this.CompletionBackends[this._defaultCompletionBackend];
+            return this.Backends[this._defaultBackend];
         }
 
         throw new KernelException(
             KernelException.ErrorCodes.BackendNotFound,
-            $"Completion backend not found with label: {label} and no default completion backend is available.");
+            $"Backend not found with label: {label} and no default backend is available.");
     }
 
     /// <summary>
-    /// Get the embeddings backend configuration matching the given label or the default if a label is not provided or not found.
+    /// Get the backend matching the given label, the default if a label is not provided or first that matches requested type.
     /// </summary>
+    /// <typeparam name="T">Specific type of backend to return.</typeparam>
     /// <param name="label">Optional label of the desired backend.</param>
-    /// <returns>The embeddings backend configuration matching the given label or the default.</returns>
+    /// <returns>The backend matching the given label or the default.</returns>
     /// <exception cref="KernelException">Thrown when no suitable backend is found.</exception>
-    public IBackendConfig GetEmbeddingsBackend(string? label = null)
+    public T GetBackend<T>(string? label = null)
     {
-        if (string.IsNullOrEmpty(label))
-        {
-            if (this._defaultEmbeddingsBackend == null)
-            {
-                throw new KernelException(
-                    KernelException.ErrorCodes.BackendNotFound,
-                    "A label was not provided and no default embeddings backend is available.");
-            }
+        var backend = this.GetBackend(label);
 
-            return this.EmbeddingsBackends[this._defaultEmbeddingsBackend];
+        if (backend is T specificBackend)
+        {
+            return specificBackend;
         }
 
-        if (this.EmbeddingsBackends.TryGetValue(label, out IBackendConfig value))
-        {
-            return value;
-        }
+        backend = this.GetAllBackends().FirstOrDefault(backend => backend is T);
 
-        if (this._defaultEmbeddingsBackend != null)
+        if (backend is not null)
         {
-            return this.EmbeddingsBackends[this._defaultEmbeddingsBackend];
+            return (T)backend;
         }
 
         throw new KernelException(
-            KernelException.ErrorCodes.BackendNotFound,
-            $"Embeddings backend not found with label: {label} and no default embeddings backend is available.");
+                KernelException.ErrorCodes.BackendNotFound,
+                $"Backend not found with type {typeof(T).Name}.");
     }
 
     /// <summary>
-    /// Get all completion backends.
+    /// Get all backends.
     /// </summary>
-    /// <returns>IEnumerable of all completion backends in the kernel configuration.</returns>
-    public IEnumerable<IBackendConfig> GetAllCompletionBackends()
+    /// <returns>IEnumerable of all backends in the kernel configuration.</returns>
+    public IEnumerable<ISKBackend> GetAllBackends()
     {
-        return this.CompletionBackends.Select(x => x.Value);
+        return this.Backends.Select(x => x.Value);
     }
 
     /// <summary>
-    /// Get all embeddings backends.
-    /// </summary>
-    /// <returns>IEnumerable of all embeddings backends in the kernel configuration.</returns>
-    public IEnumerable<IBackendConfig> GetAllEmbeddingsBackends()
-    {
-        return this.EmbeddingsBackends.Select(x => x.Value);
-    }
-
-    /// <summary>
-    /// Remove the completion backend with the given label.
+    /// Remove the backend with the given label.
     /// </summary>
     /// <param name="label">Label of backend to remove.</param>
     /// <returns>The updated kernel configuration.</returns>
-    public KernelConfig RemoveCompletionBackend(string label)
+    public KernelConfig RemoveBackend(string label)
     {
-        this.CompletionBackends.Remove(label);
-        if (this._defaultCompletionBackend == label)
+        this.Backends.Remove(label);
+        if (this._defaultBackend == label)
         {
-            this._defaultCompletionBackend = this.CompletionBackends.Keys.FirstOrDefault();
+            this._defaultBackend = this.Backends.Keys.FirstOrDefault();
         }
 
-        return this;
-    }
-
-    /// <summary>
-    /// Remove the embeddings backend with the given label.
-    /// </summary>
-    /// <param name="label">Label of backend to remove.</param>
-    /// <returns>The updated kernel configuration.</returns>
-    public KernelConfig RemoveEmbeddingsBackend(string label)
-    {
-        this.EmbeddingsBackends.Remove(label);
-        if (this._defaultEmbeddingsBackend == label)
-        {
-            this._defaultEmbeddingsBackend = this.EmbeddingsBackends.Keys.FirstOrDefault();
-        }
-
-        return this;
-    }
-
-    /// <summary>
-    /// Remove all completion backends.
-    /// </summary>
-    /// <returns>The updated kernel configuration.</returns>
-    public KernelConfig RemoveAllCompletionBackends()
-    {
-        this.CompletionBackends.Clear();
-        this._defaultCompletionBackend = null;
-        return this;
-    }
-
-    /// <summary>
-    /// Remove all embeddings backends.
-    /// </summary>
-    /// <returns>The updated kernel configuration.</returns>
-    public KernelConfig RemoveAllEmbeddingBackends()
-    {
-        this.EmbeddingsBackends.Clear();
-        this._defaultEmbeddingsBackend = null;
         return this;
     }
 
@@ -406,17 +330,16 @@ public sealed class KernelConfig
     /// <returns>The updated kernel configuration.</returns>
     public KernelConfig RemoveAllBackends()
     {
-        this.RemoveAllCompletionBackends();
-        this.RemoveAllEmbeddingBackends();
+        this.Backends.Clear();
+        this._defaultBackend = null;
         return this;
     }
 
     #region private
 
-    private Dictionary<string, IBackendConfig> CompletionBackends { get; } = new();
-    private Dictionary<string, IBackendConfig> EmbeddingsBackends { get; } = new();
-    private string? _defaultCompletionBackend;
-    private string? _defaultEmbeddingsBackend;
+    private Dictionary<string, ISKBackend> Backends { get; } = new();
+
+    private string? _defaultBackend;
 
     #endregion
 }

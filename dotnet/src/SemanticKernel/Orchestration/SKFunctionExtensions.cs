@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -20,9 +21,9 @@ public static class SKFunctionExtensions
     /// Configure the LLM settings used by semantic function.
     /// </summary>
     /// <param name="skFunction">Semantic function</param>
-    /// <param name="settings">Completion settings</param>
+    /// <param name="settings">Backend settings</param>
     /// <returns>Self instance</returns>
-    public static ISKFunction UseCompletionSettings(this ISKFunction skFunction, CompleteRequestSettings settings)
+    public static ISKFunction UseCompletionSettings(this ISKFunction skFunction, IDictionary<string, object> settings)
     {
         return skFunction.SetAIConfiguration(settings);
     }
@@ -35,7 +36,7 @@ public static class SKFunctionExtensions
     /// <returns>Self instance</returns>
     public static ISKFunction UseMaxTokens(this ISKFunction skFunction, int maxTokens)
     {
-        skFunction.RequestSettings.MaxTokens = maxTokens;
+        skFunction.BackendSettings.TryAdd("MaxTokens", maxTokens);
         return skFunction;
     }
 
@@ -47,7 +48,7 @@ public static class SKFunctionExtensions
     /// <returns>Self instance</returns>
     public static ISKFunction UseTemperature(this ISKFunction skFunction, double temperature)
     {
-        skFunction.RequestSettings.Temperature = temperature;
+        skFunction.BackendSettings.TryAdd("Temperature", temperature);
         return skFunction;
     }
 
@@ -59,7 +60,7 @@ public static class SKFunctionExtensions
     /// <returns>Self instance</returns>
     public static ISKFunction UseTopP(this ISKFunction skFunction, double topP)
     {
-        skFunction.RequestSettings.TopP = topP;
+        skFunction.BackendSettings.TryAdd("TopP", topP);
         return skFunction;
     }
 
@@ -71,7 +72,7 @@ public static class SKFunctionExtensions
     /// <returns>Self instance</returns>
     public static ISKFunction UsePresencePenalty(this ISKFunction skFunction, double presencePenalty)
     {
-        skFunction.RequestSettings.PresencePenalty = presencePenalty;
+        skFunction.BackendSettings.TryAdd("PresencePenalty", presencePenalty);
         return skFunction;
     }
 
@@ -83,7 +84,7 @@ public static class SKFunctionExtensions
     /// <returns>Self instance</returns>
     public static ISKFunction UseFrequencyPenalty(this ISKFunction skFunction, double frequencyPenalty)
     {
-        skFunction.RequestSettings.FrequencyPenalty = frequencyPenalty;
+        skFunction.BackendSettings.TryAdd("FrequencyPenalty", frequencyPenalty);
         return skFunction;
     }
 
