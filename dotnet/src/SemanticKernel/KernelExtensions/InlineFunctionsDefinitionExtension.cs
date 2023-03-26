@@ -30,6 +30,7 @@ public static class InlineFunctionsDefinitionExtension
     /// <param name="presencePenalty">Presence Penalty parameter passed to LLM</param>
     /// <param name="frequencyPenalty">Frequency Penalty parameter passed to LLM</param>
     /// <param name="stopSequences">Strings the LLM will detect to stop generating (before reaching max tokens)</param>
+    /// <param name="backend">Default backend for semantic function</param>
     /// <returns>A function ready to use</returns>
     public static ISKFunction CreateSemanticFunction(
         this IKernel kernel,
@@ -42,7 +43,8 @@ public static class InlineFunctionsDefinitionExtension
         double topP = 0,
         double presencePenalty = 0,
         double frequencyPenalty = 0,
-        IEnumerable<string>? stopSequences = null)
+        IEnumerable<string>? stopSequences = null,
+        string? backend = null)
     {
         functionName ??= RandomFunctionName();
 
@@ -58,7 +60,8 @@ public static class InlineFunctionsDefinitionExtension
                 { "FrequencyPenalty", frequencyPenalty },
                 { "MaxTokens", maxTokens },
                 { "StopSequences", stopSequences?.ToList() ?? new List<string>() }
-            }
+            },
+            DefaultBackends = backend != null ? new() { backend } : new(),
         };
 
         return kernel.CreateSemanticFunction(
