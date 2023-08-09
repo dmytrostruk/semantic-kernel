@@ -12,8 +12,9 @@ using Microsoft.SemanticKernel.Connectors.Memory.Chroma;
 using Microsoft.SemanticKernel.Connectors.Memory.Chroma.Http.ApiSchema;
 using Microsoft.SemanticKernel.Diagnostics;
 using Microsoft.SemanticKernel.Memory;
-using Moq;
+using NSubstitute;
 using Xunit;
+using NSubstitute.ExceptionExtensions;
 
 namespace SemanticKernel.Connectors.UnitTests.Memory.Chroma;
 
@@ -27,18 +28,18 @@ public sealed class ChromaMemoryStoreTests : IDisposable
 
     private readonly HttpMessageHandlerStub _messageHandlerStub;
     private readonly HttpClient _httpClient;
-    private readonly Mock<IChromaClient> _chromaClientMock;
+    private readonly IChromaClient _chromaClientMock;
     private readonly JsonSerializerOptions _serializerOptions;
 
     public ChromaMemoryStoreTests()
     {
         this._messageHandlerStub = new HttpMessageHandlerStub();
         this._httpClient = this.GetHttpClientStub();
-        this._chromaClientMock = new Mock<IChromaClient>();
+        this._chromaClientMock = Substitute.For<IChromaClient>();
 
         this._chromaClientMock
-            .Setup(client => client.GetCollectionAsync(CollectionName, CancellationToken.None))
-            .ReturnsAsync(new ChromaCollectionModel { Id = CollectionId, Name = CollectionName });
+            .GetCollectionAsync(CollectionName, CancellationToken.None)
+            .Returns(new ChromaCollectionModel { Id = CollectionId, Name = CollectionName });
 
         this._serializerOptions = new JsonSerializerOptions
         {
@@ -82,26 +83,26 @@ public sealed class ChromaMemoryStoreTests : IDisposable
     public async Task ItCanCreateCollectionAsync()
     {
         // Arrange
-        var store = new ChromaMemoryStore(this._chromaClientMock.Object);
+        var store = new ChromaMemoryStore(this._chromaClientMock);
 
         // Act
         await store.CreateCollectionAsync(CollectionName);
 
         // Assert
-        this._chromaClientMock.Verify(client => client.CreateCollectionAsync(CollectionName, CancellationToken.None), Times.Once());
+        await this._chromaClientMock.Received(1).CreateCollectionAsync(CollectionName, CancellationToken.None);
     }
 
     [Fact]
     public async Task ItCanDeleteCollectionAsync()
     {
         // Arrange
-        var store = new ChromaMemoryStore(this._chromaClientMock.Object);
+        var store = new ChromaMemoryStore(this._chromaClientMock);
 
         // Act
         await store.DeleteCollectionAsync(CollectionName);
 
         // Assert
-        this._chromaClientMock.Verify(client => client.DeleteCollectionAsync(CollectionName, CancellationToken.None), Times.Once());
+        await this._chromaClientMock.Received(1).DeleteCollectionAsync(CollectionName, CancellationToken.None);
     }
 
     [Fact]
@@ -113,10 +114,10 @@ public sealed class ChromaMemoryStoreTests : IDisposable
         const string expectedExceptionMessage = $"Cannot delete non-existent collection {collectionName}";
 
         this._chromaClientMock
-            .Setup(client => client.DeleteCollectionAsync(collectionName, CancellationToken.None))
+            .DeleteCollectionAsync(collectionName, CancellationToken.None)
             .Throws(new SKException(collectionDoesNotExistErrorMessage));
 
-        var store = new ChromaMemoryStore(this._chromaClientMock.Object);
+        var store = new ChromaMemoryStore(this._chromaClientMock);
 
         // Act
         var exception = await Record.ExceptionAsync(() => store.DeleteCollectionAsync(collectionName));
@@ -130,7 +131,7 @@ public sealed class ChromaMemoryStoreTests : IDisposable
     public async Task ItReturnsTrueWhenCollectionExistsAsync()
     {
         // Arrange
-        var store = new ChromaMemoryStore(this._chromaClientMock.Object);
+        var store = new ChromaMemoryStore(this._chromaClientMock);
 
         // Act
         var doesCollectionExist = await store.DoesCollectionExistAsync(CollectionName);
@@ -147,10 +148,10 @@ public sealed class ChromaMemoryStoreTests : IDisposable
         const string collectionDoesNotExistErrorMessage = $"Collection {collectionName} does not exist";
 
         this._chromaClientMock
-            .Setup(client => client.GetCollectionAsync(collectionName, CancellationToken.None))
+            .GetCollectionAsync(collectionName, CancellationToken.None)
             .Throws(new SKException(collectionDoesNotExistErrorMessage));
 
-        var store = new ChromaMemoryStore(this._chromaClientMock.Object);
+        var store = new ChromaMemoryStore(this._chromaClientMock);
 
         // Act
         var doesCollectionExist = await store.DoesCollectionExistAsync(collectionName);
@@ -167,10 +168,10 @@ public sealed class ChromaMemoryStoreTests : IDisposable
         var embeddingsModel = this.GetEmbeddingsModelFromMemoryRecord(expectedMemoryRecord);
 
         this._chromaClientMock
-            .Setup(client => client.GetEmbeddingsAsync(CollectionId, new[] { expectedMemoryRecord.Key }, It.IsAny<string[]>(), CancellationToken.None))
-            .ReturnsAsync(embeddingsModel);
+            .GetEmbeddingsAsync(CollectionId, Arg.Is<string[]>(x => x.SequenceEqual(new[] { expectedMemoryRecord.Key })), Arg.Any<string[]>(), CancellationToken.None)
+            .Returns(embeddingsModel);
 
-        var store = new ChromaMemoryStore(this._chromaClientMock.Object);
+        var store = new ChromaMemoryStore(this._chromaClientMock);
 
         // Act
         var actualMemoryRecord = await store.GetAsync(CollectionName, expectedMemoryRecord.Key, withEmbedding: true);
@@ -187,10 +188,10 @@ public sealed class ChromaMemoryStoreTests : IDisposable
         const string memoryRecordKey = "fake-record-key";
 
         this._chromaClientMock
-            .Setup(client => client.GetEmbeddingsAsync(CollectionId, new[] { memoryRecordKey }, It.IsAny<string[]>(), CancellationToken.None))
-            .ReturnsAsync(new ChromaEmbeddingsModel());
+            .GetEmbeddingsAsync(CollectionId, Arg.Is<string[]>(x => x.SequenceEqual(new[] { memoryRecordKey })), Arg.Any<string[]>(), CancellationToken.None)
+            .Returns(new ChromaEmbeddingsModel());
 
-        var store = new ChromaMemoryStore(this._chromaClientMock.Object);
+        var store = new ChromaMemoryStore(this._chromaClientMock);
 
         // Act
         var actualMemoryRecord = await store.GetAsync(CollectionName, memoryRecordKey, withEmbedding: true);
@@ -208,10 +209,10 @@ public sealed class ChromaMemoryStoreTests : IDisposable
         const string collectionDoesNotExistErrorMessage = $"Collection {collectionName} does not exist";
 
         this._chromaClientMock
-            .Setup(client => client.GetCollectionAsync(collectionName, CancellationToken.None))
+            .GetCollectionAsync(collectionName, CancellationToken.None)
             .Throws(new SKException(collectionDoesNotExistErrorMessage));
 
-        var store = new ChromaMemoryStore(this._chromaClientMock.Object);
+        var store = new ChromaMemoryStore(this._chromaClientMock);
 
         // Act
         var exception = await Record.ExceptionAsync(() => store.GetAsync(collectionName, memoryRecordKey, withEmbedding: true));
@@ -235,10 +236,10 @@ public sealed class ChromaMemoryStoreTests : IDisposable
         var embeddingsModel = this.GetEmbeddingsModelFromMemoryRecords(expectedMemoryRecords);
 
         this._chromaClientMock
-            .Setup(client => client.GetEmbeddingsAsync(CollectionId, memoryRecordKeys, It.IsAny<string[]>(), CancellationToken.None))
-            .ReturnsAsync(embeddingsModel);
+            .GetEmbeddingsAsync(CollectionId, Arg.Is<string[]>(x => x.SequenceEqual(memoryRecordKeys)), Arg.Any<string[]>(), CancellationToken.None)
+            .Returns(embeddingsModel);
 
-        var store = new ChromaMemoryStore(this._chromaClientMock.Object);
+        var store = new ChromaMemoryStore(this._chromaClientMock);
 
         // Act
         var actualMemoryRecords = await store.GetBatchAsync(CollectionName, memoryRecordKeys, withEmbeddings: true).ToListAsync();
@@ -259,10 +260,10 @@ public sealed class ChromaMemoryStoreTests : IDisposable
         var expectedCollections = new List<string> { "fake-collection-1", "fake-collection-2", "fake-collection-3" };
 
         this._chromaClientMock
-            .Setup(client => client.ListCollectionsAsync(CancellationToken.None))
+            .ListCollectionsAsync(CancellationToken.None)
             .Returns(expectedCollections.ToAsyncEnumerable());
 
-        var store = new ChromaMemoryStore(this._chromaClientMock.Object);
+        var store = new ChromaMemoryStore(this._chromaClientMock);
 
         // Act
         var actualCollections = await store.GetCollectionsAsync().ToListAsync();
