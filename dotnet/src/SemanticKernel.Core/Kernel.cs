@@ -126,26 +126,20 @@ repeat:
 
                 functionResult = await skFunction.InvokeAsync(context, null, invokingEventWrapper, invokedEventWrapper, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-                if (functionResult is StopFunctionResult stopResult)
+                if (this.ShouldSkipFlow(skFunction, functionResult.InvokingEventArgs, pipelineStepCount))
                 {
-                    if (this.ShouldCancelFlow(skFunction, stopResult.Reason, pipelineStepCount))
-                    {
-                        break;
-                    }
+                    continue;
+                }
 
-                    if (this.ShouldSkipFlow(skFunction, stopResult.Reason, pipelineStepCount))
-                    {
-                        continue;
-                    }
-
-                    this._logger.LogError("Function {PluginName}.{FuncitonName} stopped with an unexpected reason: {Reason}.", skFunction.PluginName, skFunction.Name, stopResult.Reason);
-                    throw new SKException($"Function {skFunction.PluginName}.{skFunction.Name} stopped with an unexpected reason: {stopResult.Reason}.");
+                if (this.ShouldCancelFlow(skFunction, functionResult.InvokingEventArgs, functionResult.InvokedEventArgs, pipelineStepCount))
+                {
+                    break;
                 }
 
                 // Stop results will not be added as Kernel results.
                 allFunctionResults.Add(functionResult!);
 
-                if (invokedEventWrapper.EventArgs?.IsRepeatRequested ?? false)
+                if (functionResult.InvokedEventArgs?.IsRepeatRequested ?? false)
                 {
                     this._logger.LogInformation("Execution repeat request on function invoked event of pipeline step {StepCount}: {PluginName}.{FunctionName}.", pipelineStepCount, skFunction.PluginName, skFunction.Name);
                     goto repeat;
@@ -162,9 +156,9 @@ repeat:
         return KernelResult.FromFunctionResults(allFunctionResults.LastOrDefault()?.Value, allFunctionResults);
     }
 
-    private bool ShouldSkipFlow(ISKFunction skFunction, StopFunctionResult.StopReason reason, int pipelineStepCount)
+    private bool ShouldSkipFlow(ISKFunction skFunction, FunctionInvokingEventArgs? invokingArgs, int pipelineStepCount)
     {
-        if (reason == StopFunctionResult.StopReason.InvokingSkipped)
+        if (invokingArgs is not null && invokingArgs.IsSkipRequested)
         {
             this._logger.LogInformation("Execution was skipped on function invoking event of pipeline step {StepCount}: {PluginName}.{FunctionName}.", pipelineStepCount, skFunction.PluginName, skFunction.Name);
             return true;
@@ -173,15 +167,19 @@ repeat:
         return false;
     }
 
-    private bool ShouldCancelFlow(ISKFunction skFunction, StopFunctionResult.StopReason reason, int pipelineStepCount)
+    private bool ShouldCancelFlow(
+        ISKFunction skFunction,
+        FunctionInvokingEventArgs? invokingArgs,
+        FunctionInvokedEventArgs? invokedArgs,
+        int pipelineStepCount)
     {
-        if (reason == StopFunctionResult.StopReason.InvokingCancelled)
+        if (invokingArgs is not null && invokingArgs.CancelToken.IsCancellationRequested)
         {
             this._logger.LogInformation("Execution was cancelled on function invoking event of pipeline step {StepCount}: {PluginName}.{FunctionName}.", pipelineStepCount, skFunction.PluginName, skFunction.Name);
             return true;
         }
 
-        if (reason == StopFunctionResult.StopReason.InvokedCancelled)
+        if (invokedArgs is not null && invokedArgs.CancelToken.IsCancellationRequested)
         {
             this._logger.LogInformation("Execution was cancelled on function invoked event of pipeline step {StepCount}: {PluginName}.{FunctionName}.", pipelineStepCount, skFunction.PluginName, skFunction.Name);
             return true;

@@ -2,13 +2,14 @@
 
 using System;
 using System.Collections.Generic;
+using Microsoft.SemanticKernel.Events;
 
 namespace Microsoft.SemanticKernel.Orchestration;
 
 /// <summary>
 /// Function result after execution.
 /// </summary>
-public class FunctionResult
+public sealed class FunctionResult
 {
     internal Dictionary<string, object>? _metadata;
 
@@ -40,6 +41,10 @@ public class FunctionResult
     /// Instance of <see cref="SKContext"/> to pass in function pipeline.
     /// </summary>
     internal SKContext Context { get; private set; }
+
+    internal FunctionInvokingEventArgs? InvokingEventArgs { get; set; }
+
+    internal FunctionInvokedEventArgs? InvokedEventArgs { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FunctionResult"/> class.
@@ -106,25 +111,4 @@ public class FunctionResult
 
     /// <inheritdoc/>
     public override string ToString() => this.Value?.ToString() ?? base.ToString();
-}
-
-internal sealed class StopFunctionResult : FunctionResult
-{
-    internal StopReason Reason { get; }
-
-    public StopFunctionResult(string functionName, string pluginName, SKContext context, StopReason stopReason) : this(functionName, pluginName, context, null, stopReason)
-    {
-    }
-
-    public StopFunctionResult(string functionName, string pluginName, SKContext context, object? value, StopReason stopReason) : base(functionName, pluginName, context, value)
-    {
-        this.Reason = stopReason;
-    }
-
-    internal enum StopReason
-    {
-        InvokingSkipped = 0,
-        InvokingCancelled = 1,
-        InvokedCancelled = 2,
-    }
 }

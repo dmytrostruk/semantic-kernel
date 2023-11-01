@@ -141,21 +141,29 @@ internal sealed class NativeFunction : ISKFunction, IDisposable
     {
         try
         {
-            this.CallFunctionInvoking(context, invokingHandlerWrapper);
-            if (this.ShouldStopInvocation(invokingHandlerWrapper?.EventArgs, out var stopReason))
+            var invokingArgs = this.CallFunctionInvoking(context, invokingHandlerWrapper);
+
+            if (FunctionEventHelper.ShouldStopInvocation(invokingArgs))
             {
-                return new StopFunctionResult(this.Name, this.PluginName, context, stopReason!.Value);
+                return new FunctionResult(this.Name, this.PluginName, context)
+                {
+                    InvokingEventArgs = invokingArgs
+                };
             }
 
-            var invokeResult = await this._function(null, requestSettings, context, cancellationToken).ConfigureAwait(false);
-            var finalResult = this.CallFunctionInvoked(invokeResult, invokedHandlerWrapper);
+            var functionResult = await this._function(null, requestSettings, context, cancellationToken).ConfigureAwait(false);
+            var invokedArgs = this.CallFunctionInvoked(functionResult, invokedHandlerWrapper);
 
-            if (this.ShouldStopInvocation(invokedHandlerWrapper?.EventArgs, out stopReason))
+            if (FunctionEventHelper.ShouldStopInvocation(invokedArgs))
             {
-                return new StopFunctionResult(this.Name, this.PluginName, context, finalResult.Value, stopReason!.Value);
+                return new FunctionResult(this.Name, this.PluginName, context, functionResult.Value)
+                {
+                    InvokingEventArgs = invokingArgs,
+                    InvokedEventArgs = invokedArgs
+                };
             }
 
-            return finalResult;
+            return functionResult;
         }
         catch (Exception e) when (!e.IsCriticalException())
         {
@@ -164,82 +172,32 @@ internal sealed class NativeFunction : ISKFunction, IDisposable
         }
     }
 
-    private void CallFunctionInvoking(SKContext context, EventHandlerWrapper<FunctionInvokingEventArgs>? eventDelegateWrapper)
+    private FunctionInvokingEventArgs? CallFunctionInvoking(SKContext context, EventHandlerWrapper<FunctionInvokingEventArgs>? eventDelegateWrapper)
     {
         if (eventDelegateWrapper?.Handler is null)
         {
-            return;
+            return null;
         }
 
-        eventDelegateWrapper.EventArgs = new FunctionInvokingEventArgs(this.Describe(), context);
-        eventDelegateWrapper.Handler.Invoke(this, eventDelegateWrapper.EventArgs);
+        var args = new FunctionInvokingEventArgs(this.Describe(), context);
+        eventDelegateWrapper.Handler.Invoke(this, args);
+
+        return args;
     }
 
-    private FunctionResult CallFunctionInvoked(FunctionResult result, EventHandlerWrapper<FunctionInvokedEventArgs>? eventDelegateWrapper)
+    private FunctionInvokedEventArgs? CallFunctionInvoked(FunctionResult result, EventHandlerWrapper<FunctionInvokedEventArgs>? eventDelegateWrapper)
     {
         if (eventDelegateWrapper?.Handler is null)
         {
-            // No handlers registered, return the result as is.
-            return result;
+            return null;
         }
 
-        eventDelegateWrapper.EventArgs = new FunctionInvokedEventArgs(this.Describe(), result);
-        eventDelegateWrapper.Handler.Invoke(this, eventDelegateWrapper.EventArgs);
+        var args = new FunctionInvokedEventArgs(this.Describe(), result);
+        eventDelegateWrapper.Handler.Invoke(this, args);
 
-        // Apply any changes from the event handlers to final result.
-        var functionResult = new FunctionResult(this.Name, this.PluginName, eventDelegateWrapper.EventArgs.SKContext, eventDelegateWrapper.EventArgs.SKContext.Result)
-        {
-            // Updates the eventArgs metadata during invoked handler execution
-            // will reflect in the result metadata
-            Metadata = eventDelegateWrapper.EventArgs.Metadata
-        };
-
-        return functionResult;
+        return args;
     }
 
-    private bool ShouldStopInvocation(FunctionInvokingEventArgs? invokingEvent, out StopFunctionResult.StopReason? reason)
-    {
-        reason = null;
-
-        // When no event handler is registered, the event args are null and
-        // this should not stop the function execution.
-        if (invokingEvent is null)
-        {
-            return false;
-        }
-
-        if (invokingEvent.IsSkipRequested)
-        {
-            reason = StopFunctionResult.StopReason.InvokingSkipped;
-        }
-        else if (invokingEvent.CancelToken.IsCancellationRequested)
-        {
-            reason = StopFunctionResult.StopReason.InvokingCancelled;
-        }
-
-        // Check any event flags that interrupt this function execution;
-        return (reason is not null);
-    }
-
-    private bool ShouldStopInvocation(FunctionInvokedEventArgs? invokedEvent, out StopFunctionResult.StopReason? reason)
-    {
-        reason = null;
-
-        // When no event handler is registered, the event args are null and
-        // this should not stop the function execution.
-        if (invokedEvent is null)
-        {
-            return false;
-        }
-
-        if (invokedEvent.CancelToken.IsCancellationRequested)
-        {
-            reason = StopFunctionResult.StopReason.InvokedCancelled;
-        }
-
-        // Check any event flags that interrupt this function execution;
-        return (reason is not null);
-    }
     /// <summary>
     /// Dispose of resources.
     /// </summary>

@@ -190,13 +190,17 @@ internal sealed class SemanticFunction : ISKFunction, IDisposable
             (var textCompletion, var defaultRequestSettings) = serviceSelector.SelectAIService<ITextCompletion>(renderedPrompt, context.ServiceProvider, this._modelSettings);
             Verify.NotNull(textCompletion);
 
-            this.CallFunctionInvoking(context, invokingHandlerWrapper, renderedPrompt);
-            if (this.ShouldStopInvocation(invokingHandlerWrapper?.EventArgs, out var stopReason))
+            var invokingArgs = this.CallFunctionInvoking(context, invokingHandlerWrapper, renderedPrompt);
+
+            if (FunctionEventHelper.ShouldStopInvocation(invokingArgs))
             {
-                return new StopFunctionResult(this.Name, this.PluginName, context, stopReason!.Value);
+                return new FunctionResult(this.Name, this.PluginName, context)
+                {
+                    InvokingEventArgs = invokingArgs,
+                };
             }
 
-            renderedPrompt = this.TryUpdatePromptFromEventArgsMetadata(renderedPrompt, invokingHandlerWrapper?.EventArgs);
+            renderedPrompt = this.TryUpdatePromptFromEventArgsMetadata(renderedPrompt, invokingArgs);
 
             IReadOnlyList<ITextResult> completionResults = await textCompletion.GetCompletionsAsync(renderedPrompt, requestSettings, cancellationToken).ConfigureAwait(false);
             string completion = await GetCompletionsResultContentAsync(completionResults, cancellationToken).ConfigureAwait(false);
@@ -211,10 +215,15 @@ internal sealed class SemanticFunction : ISKFunction, IDisposable
             result.Metadata.Add(AIFunctionResultExtensions.ModelResultsMetadataKey, modelResults);
             result.Metadata.Add(SemanticFunction.RenderedPromptMetadataKey, renderedPrompt);
 
-            this.CallFunctionInvoked(result, invokedHandlerWrapper, renderedPrompt);
-            if (this.ShouldStopInvocation(invokedHandlerWrapper?.EventArgs, out stopReason))
+            var invokedArgs = this.CallFunctionInvoked(result, invokedHandlerWrapper, renderedPrompt);
+
+            if (FunctionEventHelper.ShouldStopInvocation(invokingArgs))
             {
-                return new StopFunctionResult(this.Name, this.PluginName, context, result.Value, stopReason!.Value);
+                return new FunctionResult(this.Name, this.PluginName, context, result.Value)
+                {
+                    InvokingEventArgs = invokingArgs,
+                    InvokedEventArgs = invokedArgs
+                };
             }
         }
         catch (Exception ex) when (!ex.IsCriticalException())
@@ -225,82 +234,43 @@ internal sealed class SemanticFunction : ISKFunction, IDisposable
 
         return result;
     }
-    private void CallFunctionInvoking(SKContext context, EventHandlerWrapper<FunctionInvokingEventArgs>? eventDelegateWrapper, string prompt)
+    private FunctionInvokingEventArgs? CallFunctionInvoking(SKContext context, EventHandlerWrapper<FunctionInvokingEventArgs>? eventDelegateWrapper, string prompt)
     {
         if (eventDelegateWrapper?.Handler is null)
         {
-            return;
+            return null;
         }
 
-        eventDelegateWrapper.EventArgs = new FunctionInvokingEventArgs(this.Describe(), context)
+        var args = new FunctionInvokingEventArgs(this.Describe(), context)
         {
             Metadata = {
                 [SemanticFunction.RenderedPromptMetadataKey] = prompt
             }
         };
-        eventDelegateWrapper.Handler.Invoke(this, eventDelegateWrapper.EventArgs);
+
+        eventDelegateWrapper.Handler.Invoke(this, args);
+
+        return args;
     }
 
-    private void CallFunctionInvoked(FunctionResult result, EventHandlerWrapper<FunctionInvokedEventArgs>? eventDelegateWrapper, string prompt)
+    private FunctionInvokedEventArgs? CallFunctionInvoked(FunctionResult result, EventHandlerWrapper<FunctionInvokedEventArgs>? eventDelegateWrapper, string prompt)
     {
         result.Metadata[RenderedPromptMetadataKey] = prompt;
 
         // Not handlers registered, return the result as is
         if (eventDelegateWrapper?.Handler is null)
         {
-            return;
+            return null;
         }
 
-        eventDelegateWrapper.EventArgs = new FunctionInvokedEventArgs(this.Describe(), result);
-        eventDelegateWrapper.Handler.Invoke(this, eventDelegateWrapper.EventArgs);
+        var args = new FunctionInvokedEventArgs(this.Describe(), result);
+        eventDelegateWrapper.Handler.Invoke(this, args);
 
         // Updates the eventArgs metadata during invoked handler execution
         // will reflect in the result metadata
-        result.Metadata = eventDelegateWrapper.EventArgs.Metadata;
-    }
+        result.Metadata = args.Metadata;
 
-    private bool ShouldStopInvocation(FunctionInvokingEventArgs? invokingEvent, out StopFunctionResult.StopReason? reason)
-    {
-        reason = null;
-
-        // When no event handler is registered, the event args are null and
-        // this should not stop the function execution.
-        if (invokingEvent is null)
-        {
-            return false;
-        }
-
-        if (invokingEvent.IsSkipRequested)
-        {
-            reason = StopFunctionResult.StopReason.InvokingSkipped;
-        }
-        else if (invokingEvent.CancelToken.IsCancellationRequested)
-        {
-            reason = StopFunctionResult.StopReason.InvokingCancelled;
-        }
-
-        // Check any event flags that interrupt this function execution;
-        return (reason is not null);
-    }
-
-    private bool ShouldStopInvocation(FunctionInvokedEventArgs? invokedEvent, out StopFunctionResult.StopReason? reason)
-    {
-        reason = null;
-
-        // When no event handler is registered, the event args are null and
-        // this should not stop the function execution.
-        if (invokedEvent is null)
-        {
-            return false;
-        }
-
-        if (invokedEvent.CancelToken.IsCancellationRequested)
-        {
-            reason = StopFunctionResult.StopReason.InvokedCancelled;
-        }
-
-        // Check any event flags that interrupt this function execution;
-        return (reason is not null);
+        return args;
     }
 
     private string TryUpdatePromptFromEventArgsMetadata(string renderedPrompt, FunctionInvokingEventArgs? eventArgs)

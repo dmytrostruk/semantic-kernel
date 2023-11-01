@@ -23,11 +23,6 @@ public sealed class EventHandlerWrapper<TEventArgs> where TEventArgs : SKEventAr
     }
 
     /// <summary>
-    /// Gets or sets the event args.
-    /// </summary>
-    public TEventArgs? EventArgs { get; internal set; }
-
-    /// <summary>
     /// Gets the event handler.
     /// </summary>
     internal EventHandler<TEventArgs>? Handler { get; }
