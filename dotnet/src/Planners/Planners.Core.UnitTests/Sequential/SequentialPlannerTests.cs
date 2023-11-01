@@ -50,14 +50,14 @@ public sealed class SequentialPlannerTests
                     x.InvokeAsync(
                         It.IsAny<SKContext>(),
                         It.IsAny<AIRequestSettings>(),
-                        It.IsAny<EventHandlerWrapper<FunctionInvokingEventArgs>>(),
-                        It.IsAny<EventHandlerWrapper<FunctionInvokedEventArgs>>(),
+                        It.IsAny<EventHandler<FunctionInvokingEventArgs>>(),
+                        It.IsAny<EventHandler<FunctionInvokedEventArgs>>(),
                         It.IsAny<CancellationToken>()))
                 .Returns<
                     SKContext,
                     object,
-                    EventHandlerWrapper<FunctionInvokingEventArgs>,
-                    EventHandlerWrapper<FunctionInvokedEventArgs>,
+                    EventHandler<FunctionInvokingEventArgs>,
+                    EventHandler<FunctionInvokedEventArgs>,
                     CancellationToken>((context, settings, _, _, cancellationToken) =>
                 {
                     context.Variables.Update("MOCK FUNCTION CALLED");
@@ -112,8 +112,8 @@ public sealed class SequentialPlannerTests
         )).Callback<
             SKContext,
             object,
-            EventHandlerWrapper<FunctionInvokingEventArgs>,
-            EventHandlerWrapper<FunctionInvokedEventArgs>,
+            EventHandler<FunctionInvokingEventArgs>,
+            EventHandler<FunctionInvokedEventArgs>,
             CancellationToken>(
             (c, s, _, _, ct) => c.Variables.Update("Hello world!")
         ).Returns(() => Task.FromResult(new FunctionResult("FunctionName", "PluginName", returnContext, planString)));
@@ -194,8 +194,8 @@ public sealed class SequentialPlannerTests
         )).Callback<
             SKContext,
             object,
-            EventHandlerWrapper<FunctionInvokingEventArgs>,
-            EventHandlerWrapper<FunctionInvokedEventArgs>,
+            EventHandler<FunctionInvokingEventArgs>,
+            EventHandler<FunctionInvokedEventArgs>,
             CancellationToken>(
             (c, s, _, _, ct) => c.Variables.Update("Hello world!")
         ).Returns(() => Task.FromResult(new FunctionResult("FunctionName", "PluginName", returnContext, planString)));

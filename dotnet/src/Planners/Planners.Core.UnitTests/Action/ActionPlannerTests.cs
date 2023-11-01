@@ -184,8 +184,8 @@ This plan uses the `GitHubPlugin.PullsList` function to list the open pull reque
         )).Callback<
             SKContext,
             object,
-            EventHandlerWrapper<FunctionInvokingEventArgs>,
-            EventHandlerWrapper<FunctionInvokedEventArgs>,
+            EventHandler<FunctionInvokingEventArgs>,
+            EventHandler<FunctionInvokedEventArgs>,
             CancellationToken>(
             (c, s, _, _, ct) => c.Variables.Update("Hello world!")
         ).Returns(() => Task.FromResult(new FunctionResult("FunctionName", "PluginName", returnContext, testPlanString)));
@@ -231,14 +231,14 @@ This plan uses the `GitHubPlugin.PullsList` function to list the open pull reque
             mockFunction.Setup(x => x.InvokeAsync(
                 It.IsAny<SKContext>(),
                 It.IsAny<AIRequestSettings?>(),
-                It.IsAny<EventHandlerWrapper<FunctionInvokingEventArgs>>(),
-                It.IsAny<EventHandlerWrapper<FunctionInvokedEventArgs>>(),
+                It.IsAny<EventHandler<FunctionInvokingEventArgs>>(),
+                It.IsAny<EventHandler<FunctionInvokedEventArgs>>(),
                 It.IsAny<CancellationToken>()))
                 .Returns<
                     SKContext,
                     AIRequestSettings,
-                    EventHandlerWrapper<FunctionInvokingEventArgs>,
-                    EventHandlerWrapper<FunctionInvokedEventArgs>,
+                    EventHandler<FunctionInvokingEventArgs>,
+                    EventHandler<FunctionInvokedEventArgs>,
                     CancellationToken>((context, settings, _, _, CancellationToken) =>
                 {
                     context.Variables.Update("MOCK FUNCTION CALLED");

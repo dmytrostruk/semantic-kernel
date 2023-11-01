@@ -90,13 +90,13 @@ internal sealed class SemanticFunction : ISKFunction, IDisposable
     public async Task<FunctionResult> InvokeAsync(
         SKContext context,
         AIRequestSettings? requestSettings = null,
-        EventHandlerWrapper<FunctionInvokingEventArgs>? invokingHandlerWrapper = null,
-        EventHandlerWrapper<FunctionInvokedEventArgs>? invokedHandlerWrapper = null,
+        EventHandler<FunctionInvokingEventArgs>? invokingHandler = null,
+        EventHandler<FunctionInvokedEventArgs>? invokedHandler = null,
         CancellationToken cancellationToken = default)
     {
         this.AddDefaultValues(context.Variables);
 
-        return await this.RunPromptAsync(requestSettings, context, invokingHandlerWrapper, invokedHandlerWrapper, cancellationToken).ConfigureAwait(false);
+        return await this.RunPromptAsync(requestSettings, context, invokingHandler, invokedHandler, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -176,8 +176,8 @@ internal sealed class SemanticFunction : ISKFunction, IDisposable
     private async Task<FunctionResult> RunPromptAsync(
         AIRequestSettings? requestSettings,
         SKContext context,
-        EventHandlerWrapper<FunctionInvokingEventArgs>? invokingHandlerWrapper = null,
-        EventHandlerWrapper<FunctionInvokedEventArgs>? invokedHandlerWrapper = null,
+        EventHandler<FunctionInvokingEventArgs>? invokingHandler = null,
+        EventHandler<FunctionInvokedEventArgs>? invokedHandler = null,
         CancellationToken cancellationToken = default)
     {
         FunctionResult result;
@@ -190,7 +190,7 @@ internal sealed class SemanticFunction : ISKFunction, IDisposable
             (var textCompletion, var defaultRequestSettings) = serviceSelector.SelectAIService<ITextCompletion>(renderedPrompt, context.ServiceProvider, this._modelSettings);
             Verify.NotNull(textCompletion);
 
-            var invokingArgs = this.CallFunctionInvoking(context, invokingHandlerWrapper, renderedPrompt);
+            var invokingArgs = this.CallFunctionInvoking(context, invokingHandler, renderedPrompt);
 
             if (FunctionEventHelper.ShouldStopInvocation(invokingArgs))
             {
@@ -215,7 +215,7 @@ internal sealed class SemanticFunction : ISKFunction, IDisposable
             result.Metadata.Add(AIFunctionResultExtensions.ModelResultsMetadataKey, modelResults);
             result.Metadata.Add(SemanticFunction.RenderedPromptMetadataKey, renderedPrompt);
 
-            var invokedArgs = this.CallFunctionInvoked(result, invokedHandlerWrapper, renderedPrompt);
+            var invokedArgs = this.CallFunctionInvoked(result, invokedHandler, renderedPrompt);
 
             if (FunctionEventHelper.ShouldStopInvocation(invokingArgs))
             {
@@ -234,9 +234,9 @@ internal sealed class SemanticFunction : ISKFunction, IDisposable
 
         return result;
     }
-    private FunctionInvokingEventArgs? CallFunctionInvoking(SKContext context, EventHandlerWrapper<FunctionInvokingEventArgs>? eventDelegateWrapper, string prompt)
+    private FunctionInvokingEventArgs? CallFunctionInvoking(SKContext context, EventHandler<FunctionInvokingEventArgs>? eventDelegate, string prompt)
     {
-        if (eventDelegateWrapper?.Handler is null)
+        if (eventDelegate is null)
         {
             return null;
         }
@@ -248,23 +248,23 @@ internal sealed class SemanticFunction : ISKFunction, IDisposable
             }
         };
 
-        eventDelegateWrapper.Handler.Invoke(this, args);
+        eventDelegate.Invoke(this, args);
 
         return args;
     }
 
-    private FunctionInvokedEventArgs? CallFunctionInvoked(FunctionResult result, EventHandlerWrapper<FunctionInvokedEventArgs>? eventDelegateWrapper, string prompt)
+    private FunctionInvokedEventArgs? CallFunctionInvoked(FunctionResult result, EventHandler<FunctionInvokedEventArgs>? eventDelegate, string prompt)
     {
         result.Metadata[RenderedPromptMetadataKey] = prompt;
 
         // Not handlers registered, return the result as is
-        if (eventDelegateWrapper?.Handler is null)
+        if (eventDelegate is null)
         {
             return null;
         }
 
         var args = new FunctionInvokedEventArgs(this.Describe(), result);
-        eventDelegateWrapper.Handler.Invoke(this, args);
+        eventDelegate.Invoke(this, args);
 
         // Updates the eventArgs metadata during invoked handler execution
         // will reflect in the result metadata

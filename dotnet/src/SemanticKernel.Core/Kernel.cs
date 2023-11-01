@@ -121,10 +121,7 @@ repeat:
             {
                 var functionDetails = skFunction.Describe();
 
-                var invokingEventWrapper = new EventHandlerWrapper<FunctionInvokingEventArgs>(this.FunctionInvoking);
-                var invokedEventWrapper = new EventHandlerWrapper<FunctionInvokedEventArgs>(this.FunctionInvoked);
-
-                functionResult = await skFunction.InvokeAsync(context, null, invokingEventWrapper, invokedEventWrapper, cancellationToken: cancellationToken).ConfigureAwait(false);
+                functionResult = await skFunction.InvokeAsync(context, null, this.FunctionInvoking, this.FunctionInvoked, cancellationToken: cancellationToken).ConfigureAwait(false);
 
                 if (this.ShouldSkipFlow(skFunction, functionResult.InvokingEventArgs, pipelineStepCount))
                 {

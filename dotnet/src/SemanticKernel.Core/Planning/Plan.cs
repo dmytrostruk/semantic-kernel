@@ -323,8 +323,8 @@ public sealed class Plan : ISKFunction
     public async Task<FunctionResult> InvokeAsync(
         SKContext context,
         AIRequestSettings? requestSettings = null,
-        EventHandlerWrapper<FunctionInvokingEventArgs>? invokingHandlerWrapper = null,
-        EventHandlerWrapper<FunctionInvokedEventArgs>? invokedHandlerWrapper = null,
+        EventHandler<FunctionInvokingEventArgs>? invokingHandlerWrapper = null,
+        EventHandler<FunctionInvokedEventArgs>? invokedHandlerWrapper = null,
         CancellationToken cancellationToken = default)
     {
         var result = new FunctionResult(this.Name, this.PluginName, context);

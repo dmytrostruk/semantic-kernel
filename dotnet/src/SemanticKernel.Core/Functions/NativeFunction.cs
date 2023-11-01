@@ -135,13 +135,13 @@ internal sealed class NativeFunction : ISKFunction, IDisposable
     public async Task<FunctionResult> InvokeAsync(
         SKContext context,
         AIRequestSettings? requestSettings = null,
-        EventHandlerWrapper<FunctionInvokingEventArgs>? invokingHandlerWrapper = null,
-        EventHandlerWrapper<FunctionInvokedEventArgs>? invokedHandlerWrapper = null,
+        EventHandler<FunctionInvokingEventArgs>? invokingHandler = null,
+        EventHandler<FunctionInvokedEventArgs>? invokedHandler = null,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            var invokingArgs = this.CallFunctionInvoking(context, invokingHandlerWrapper);
+            var invokingArgs = this.CallFunctionInvoking(context, invokingHandler);
 
             if (FunctionEventHelper.ShouldStopInvocation(invokingArgs))
             {
@@ -152,7 +152,7 @@ internal sealed class NativeFunction : ISKFunction, IDisposable
             }
 
             var functionResult = await this._function(null, requestSettings, context, cancellationToken).ConfigureAwait(false);
-            var invokedArgs = this.CallFunctionInvoked(functionResult, invokedHandlerWrapper);
+            var invokedArgs = this.CallFunctionInvoked(functionResult, invokedHandler);
 
             if (FunctionEventHelper.ShouldStopInvocation(invokedArgs))
             {
@@ -172,28 +172,28 @@ internal sealed class NativeFunction : ISKFunction, IDisposable
         }
     }
 
-    private FunctionInvokingEventArgs? CallFunctionInvoking(SKContext context, EventHandlerWrapper<FunctionInvokingEventArgs>? eventDelegateWrapper)
+    private FunctionInvokingEventArgs? CallFunctionInvoking(SKContext context, EventHandler<FunctionInvokingEventArgs>? eventDelegate)
     {
-        if (eventDelegateWrapper?.Handler is null)
+        if (eventDelegate is null)
         {
             return null;
         }
 
         var args = new FunctionInvokingEventArgs(this.Describe(), context);
-        eventDelegateWrapper.Handler.Invoke(this, args);
+        eventDelegate.Invoke(this, args);
 
         return args;
     }
 
-    private FunctionInvokedEventArgs? CallFunctionInvoked(FunctionResult result, EventHandlerWrapper<FunctionInvokedEventArgs>? eventDelegateWrapper)
+    private FunctionInvokedEventArgs? CallFunctionInvoked(FunctionResult result, EventHandler<FunctionInvokedEventArgs>? eventDelegate)
     {
-        if (eventDelegateWrapper?.Handler is null)
+        if (eventDelegate is null)
         {
             return null;
         }
 
         var args = new FunctionInvokedEventArgs(this.Describe(), result);
-        eventDelegateWrapper.Handler.Invoke(this, args);
+        eventDelegate.Invoke(this, args);
 
         return args;
     }

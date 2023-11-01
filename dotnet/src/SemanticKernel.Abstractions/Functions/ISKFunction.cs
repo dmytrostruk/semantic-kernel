@@ -45,15 +45,15 @@ public interface ISKFunction
     /// </summary>
     /// <param name="context">SK context</param>
     /// <param name="requestSettings">LLM completion settings (for semantic functions only)</param>
-    /// <param name="invokingHandlerWrapper">Invoking event handler wrapper</param>
-    /// <param name="invokedHandlerWrapper">Invoked event handler wrapper</param>
+    /// <param name="invokingHandler">Invoking event handler</param>
+    /// <param name="invokedHandler">Invoked event handler</param>
     /// <returns>The updated context, potentially a new one if context switching is implemented.</returns>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> to monitor for cancellation requests. The default is <see cref="CancellationToken.None"/>.</param>
     Task<FunctionResult> InvokeAsync(
         SKContext context,
         AIRequestSettings? requestSettings = null,
-        EventHandlerWrapper<FunctionInvokingEventArgs>? invokingHandlerWrapper = null,
-        EventHandlerWrapper<FunctionInvokedEventArgs>? invokedHandlerWrapper = null,
+        EventHandler<FunctionInvokingEventArgs>? invokingHandler = null,
+        EventHandler<FunctionInvokedEventArgs>? invokedHandler = null,
         CancellationToken cancellationToken = default);
 
     #region Obsolete

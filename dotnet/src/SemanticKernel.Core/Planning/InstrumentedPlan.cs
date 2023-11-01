@@ -52,12 +52,12 @@ internal sealed class InstrumentedPlan : ISKFunction
     public async Task<FunctionResult> InvokeAsync(
         SKContext context,
         AIRequestSettings? requestSettings = null,
-        EventHandlerWrapper<FunctionInvokingEventArgs>? invokingHandlerWrapper = null,
-        EventHandlerWrapper<FunctionInvokedEventArgs>? invokedHandlerWrapper = null,
+        EventHandler<FunctionInvokingEventArgs>? invokingHandler = null,
+        EventHandler<FunctionInvokedEventArgs>? invokedHandler = null,
         CancellationToken cancellationToken = default)
     {
         return await this.InvokeWithInstrumentationAsync(() =>
-            this._plan.InvokeAsync(context, requestSettings, invokingHandlerWrapper, invokedHandlerWrapper, cancellationToken)).ConfigureAwait(false);
+            this._plan.InvokeAsync(context, requestSettings, invokingHandler, invokedHandler, cancellationToken)).ConfigureAwait(false);
     }
 
     #region private ================================================================================
