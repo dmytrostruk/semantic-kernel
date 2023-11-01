@@ -151,10 +151,19 @@ internal sealed class NativeFunction : ISKFunction, IDisposable
                 };
             }
 
-            var invokeResult = await this._function(null, requestSettings, context, cancellationToken).ConfigureAwait(false);
-            var finalResult = this.CallFunctionInvoked(invokeResult, invokedHandlerWrapper);
+            var functionResult = await this._function(null, requestSettings, context, cancellationToken).ConfigureAwait(false);
+            var invokedArgs = this.CallFunctionInvoked(functionResult, invokedHandlerWrapper);
 
-            return finalResult;
+            if (FunctionEventHelper.ShouldStopInvocation(invokedArgs))
+            {
+                return new FunctionResult(this.Name, this.PluginName, context, functionResult.Value)
+                {
+                    InvokingEventArgs = invokingArgs,
+                    InvokedEventArgs = invokedArgs
+                };
+            }
+
+            return functionResult;
         }
         catch (Exception e) when (!e.IsCriticalException())
         {
@@ -176,26 +185,17 @@ internal sealed class NativeFunction : ISKFunction, IDisposable
         return args;
     }
 
-    private FunctionResult CallFunctionInvoked(FunctionResult result, EventHandlerWrapper<FunctionInvokedEventArgs>? eventDelegateWrapper)
+    private FunctionInvokedEventArgs? CallFunctionInvoked(FunctionResult result, EventHandlerWrapper<FunctionInvokedEventArgs>? eventDelegateWrapper)
     {
         if (eventDelegateWrapper?.Handler is null)
         {
-            return result;
+            return null;
         }
 
         var args = new FunctionInvokedEventArgs(this.Describe(), result);
         eventDelegateWrapper.Handler.Invoke(this, args);
 
-        // Apply any changes from the event handlers to final result.
-        var functionResult = new FunctionResult(this.Name, this.PluginName, args.SKContext, args.SKContext.Result)
-        {
-            // Updates the eventArgs metadata during invoked handler execution
-            // will reflect in the result metadata
-            Metadata = args.Metadata,
-            InvokedEventArgs = args
-        };
-
-        return functionResult;
+        return args;
     }
 
     /// <summary>
