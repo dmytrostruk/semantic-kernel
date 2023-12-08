@@ -13,7 +13,7 @@ public static class Example74_Filters
             Console.WriteLine($"{nameof(FirstFunctionFilter)}.{nameof(OnFunctionInvoking)} - {context.Function.Name}");
 
         public void OnFunctionInvoked(FunctionInvokedContext context) =>
-            Console.WriteLine($"{nameof(FirstFunctionFilter)}.{nameof(OnFunctionInvoked)} - ${context.Function.Name}");
+            Console.WriteLine($"{nameof(FirstFunctionFilter)}.{nameof(OnFunctionInvoked)} - {context.Function.Name}");
     }
 
     public class SecondFunctionFilter : IFunctionFilter
@@ -51,6 +51,7 @@ public static class Example74_Filters
         var function = kernel.CreateFunctionFromPrompt("What is Seattle", functionName: "MyFunction");
         var result = await kernel.InvokeAsync(function);
 
+        Console.WriteLine();
         Console.WriteLine(result);
 
         Console.ReadKey();
