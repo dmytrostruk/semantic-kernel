@@ -123,8 +123,8 @@ internal sealed class KernelFunctionFromPrompt : KernelFunction
     {
         this.AddDefaultValues(arguments);
 
-        (var aiService, var renderedPrompt, var renderedEventArgs) = await this.RenderPromptAsync(kernel, arguments, cancellationToken).ConfigureAwait(false);
-        if (renderedEventArgs?.Cancel is true)
+        (var aiService, var renderedPrompt, var renderedContext) = await this.RenderPromptAsync(kernel, arguments, cancellationToken).ConfigureAwait(false);
+        if (renderedContext?.Cancel is true)
         {
             throw new OperationCanceledException($"A {nameof(Kernel)}.{nameof(Kernel.PromptRendered)} event handler requested cancellation before function invocation.");
         }
@@ -152,8 +152,8 @@ internal sealed class KernelFunctionFromPrompt : KernelFunction
     {
         this.AddDefaultValues(arguments);
 
-        (var aiService, var renderedPrompt, var renderedEventArgs) = await this.RenderPromptAsync(kernel, arguments, cancellationToken).ConfigureAwait(false);
-        if (renderedEventArgs?.Cancel ?? false)
+        (var aiService, var renderedPrompt, var renderedContext) = await this.RenderPromptAsync(kernel, arguments, cancellationToken).ConfigureAwait(false);
+        if (renderedContext?.Cancel ?? false)
         {
             yield break;
         }
@@ -240,7 +240,7 @@ internal sealed class KernelFunctionFromPrompt : KernelFunction
         }
     }
 
-    private async Task<(IAIService, string, PromptRenderedEventArgs?)> RenderPromptAsync(Kernel kernel, KernelArguments arguments, CancellationToken cancellationToken)
+    private async Task<(IAIService, string, PromptRenderedContext?)> RenderPromptAsync(Kernel kernel, KernelArguments arguments, CancellationToken cancellationToken)
     {
         var serviceSelector = kernel.ServiceSelector;
         IAIService? aiService;
@@ -268,9 +268,9 @@ internal sealed class KernelFunctionFromPrompt : KernelFunction
 
         var renderedPrompt = await this._promptTemplate.RenderAsync(kernel, arguments, cancellationToken).ConfigureAwait(false);
 
-        var renderedEventArgs = kernel.OnPromptRendered(this, arguments, renderedPrompt);
+        var renderedContext = kernel.OnPromptRendered(this, arguments, renderedPrompt);
 
-        return (aiService, renderedPrompt, renderedEventArgs);
+        return (aiService, renderedPrompt, renderedContext);
     }
 
     /// <summary>Create a random, valid function name.</summary>

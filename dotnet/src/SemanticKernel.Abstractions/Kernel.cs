@@ -33,6 +33,10 @@ public sealed class Kernel
     private CultureInfo _culture = CultureInfo.InvariantCulture;
     /// <summary>The collection of plugins, initialized via the constructor or lazily-initialized on first access via <see cref="Plugins"/>.</summary>
     private KernelPluginCollection? _plugins;
+    /// <summary>Contains collection of function filters.</summary>
+    private IList<IFunctionFilter>? _functionFilters;
+    /// <summary>Contains collection of prompt filters.</summary>
+    private IList<IPromptFilter>? _promptFilters;
 
     /// <summary>
     /// Initializes a new instance of <see cref="Kernel"/>.
@@ -55,6 +59,9 @@ public sealed class Kernel
 
         // Store the provided plugins. If there weren't any, look in DI to see if there's a plugin collection.
         this._plugins = plugins ?? this.Services.GetService<KernelPluginCollection>();
+        this._functionFilters = this.Services.GetServices<IFunctionFilter>().ToList();
+        this._promptFilters = this.Services.GetServices<IPromptFilter>().ToList();
+
         if (this._plugins is null)
         {
             // Otherwise, enumerate any plugins that may have been registered directly.
@@ -97,11 +104,9 @@ public sealed class Kernel
     public Kernel Clone() =>
         new(this.Services, this._plugins is { Count: > 0 } ? new KernelPluginCollection(this._plugins) : null)
         {
-            FunctionInvoking = this.FunctionInvoking,
-            FunctionInvoked = this.FunctionInvoked,
-            PromptRendering = this.PromptRendering,
-            PromptRendered = this.PromptRendered,
             _data = this._data is { Count: > 0 } ? new Dictionary<string, object?>(this._data) : null,
+            _functionFilters = this._functionFilters is { Count: > 0 } ? new List<IFunctionFilter>(this._functionFilters) : null,
+            _promptFilters = this._promptFilters is { Count: > 0 } ? new List<IPromptFilter>(this._promptFilters) : null,
             _culture = this._culture,
         };
 
@@ -182,6 +187,22 @@ public sealed class Kernel
     /// Provides an event that's raised after a prompt is rendered.
     /// </summary>
     public event EventHandler<PromptRenderedEventArgs>? PromptRendered;
+
+    /// <summary>
+    /// Contains collection of function filters.
+    /// </summary>
+    public IList<IFunctionFilter>? FunctionFilters =>
+        this._functionFilters ??
+        Interlocked.CompareExchange(ref this._functionFilters, new List<IFunctionFilter>(), null) ??
+        this._functionFilters;
+
+    /// <summary>
+    /// Contains collection of prompt filters.
+    /// </summary>
+    public IList<IPromptFilter>? PromptFilters =>
+        this._promptFilters ??
+        Interlocked.CompareExchange(ref this._promptFilters, new List<IPromptFilter>(), null) ??
+        this._promptFilters;
 
     #region GetServices
     /// <summary>Gets a service from the <see cref="Services"/> collection.</summary>
@@ -268,52 +289,68 @@ public sealed class Kernel
     #endregion
 
     #region Internal Event Helpers
-    internal FunctionInvokingEventArgs? OnFunctionInvoking(KernelFunction function, KernelArguments arguments)
+    internal FunctionInvokingContext? OnFunctionInvoking(KernelFunction function, KernelArguments arguments)
     {
-        FunctionInvokingEventArgs? eventArgs = null;
-        if (this.FunctionInvoking is { } functionInvoking)
+        FunctionInvokingContext? context = null;
+
+        if (this._functionFilters is not null)
         {
-            eventArgs = new(function, arguments);
-            functionInvoking.Invoke(this, eventArgs);
+            foreach (var filter in this._functionFilters)
+            {
+                context = new(function, arguments);
+                filter.OnFunctionInvoking(context);
+            }
         }
 
-        return eventArgs;
+        return context;
     }
 
-    internal FunctionInvokedEventArgs? OnFunctionInvoked(KernelFunction function, KernelArguments arguments, FunctionResult result)
+    internal FunctionInvokedContext? OnFunctionInvoked(KernelFunction function, KernelArguments arguments, FunctionResult result)
     {
-        FunctionInvokedEventArgs? eventArgs = null;
-        if (this.FunctionInvoked is { } functionInvoked)
+        FunctionInvokedContext? context = null;
+
+        if (this._functionFilters is not null)
         {
-            eventArgs = new(function, arguments, result);
-            functionInvoked.Invoke(this, eventArgs);
+            foreach (var filter in this._functionFilters)
+            {
+                context = new(function, arguments, result);
+                filter.OnFunctionInvoked(context);
+            }
         }
 
-        return eventArgs;
+        return context;
     }
 
-    internal PromptRenderingEventArgs? OnPromptRendering(KernelFunction function, KernelArguments arguments)
+    internal PromptRenderingContext? OnPromptRendering(KernelFunction function, KernelArguments arguments)
     {
-        PromptRenderingEventArgs? eventArgs = null;
-        if (this.PromptRendering is { } promptRendering)
+        PromptRenderingContext? context = null;
+
+        if (this._promptFilters is not null)
         {
-            eventArgs = new(function, arguments);
-            promptRendering.Invoke(this, eventArgs);
+            foreach (var filter in this._promptFilters)
+            {
+                context = new(function, arguments);
+                filter.OnPromptRendering(context);
+            }
         }
 
-        return eventArgs;
+        return context;
     }
 
-    internal PromptRenderedEventArgs? OnPromptRendered(KernelFunction function, KernelArguments arguments, string renderedPrompt)
+    internal PromptRenderedContext? OnPromptRendered(KernelFunction function, KernelArguments arguments, string renderedPrompt)
     {
-        PromptRenderedEventArgs? eventArgs = null;
-        if (this.PromptRendered is { } promptRendered)
+        PromptRenderedContext? context = null;
+
+        if (this._promptFilters is not null)
         {
-            eventArgs = new(function, arguments, renderedPrompt);
-            promptRendered.Invoke(this, eventArgs);
+            foreach (var filter in this._promptFilters)
+            {
+                context = new(function, arguments, renderedPrompt);
+                filter.OnPromptRendered(context);
+            }
         }
 
-        return eventArgs;
+        return context;
     }
     #endregion
 
