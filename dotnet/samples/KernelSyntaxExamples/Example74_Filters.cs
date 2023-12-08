@@ -10,7 +10,7 @@ public static class Example74_Filters
     public class FirstFunctionFilter : IFunctionFilter
     {
         public void OnFunctionInvoking(FunctionInvokingContext context) =>
-            Console.WriteLine($"{nameof(FirstFunctionFilter)}.{nameof(OnFunctionInvoking)} - ${context.Function.Name}");
+            Console.WriteLine($"{nameof(FirstFunctionFilter)}.{nameof(OnFunctionInvoking)} - {context.Function.Name}");
 
         public void OnFunctionInvoked(FunctionInvokedContext context) =>
             Console.WriteLine($"{nameof(FirstFunctionFilter)}.{nameof(OnFunctionInvoked)} - ${context.Function.Name}");
@@ -19,19 +19,19 @@ public static class Example74_Filters
     public class SecondFunctionFilter : IFunctionFilter
     {
         public void OnFunctionInvoking(FunctionInvokingContext context) =>
-            Console.WriteLine($"{nameof(SecondFunctionFilter)}.{nameof(OnFunctionInvoking)} - ${context.Function.Name}");
+            Console.WriteLine($"{nameof(SecondFunctionFilter)}.{nameof(OnFunctionInvoking)} - {context.Function.Name}");
 
         public void OnFunctionInvoked(FunctionInvokedContext context) =>
-            Console.WriteLine($"{nameof(SecondFunctionFilter)}.{nameof(OnFunctionInvoked)} - ${context.Function.Name}");
+            Console.WriteLine($"{nameof(SecondFunctionFilter)}.{nameof(OnFunctionInvoked)} - {context.Function.Name}");
     }
 
     public class FirstPromptFilter : IPromptFilter
     {
         public void OnPromptRendering(PromptRenderingContext context) =>
-            Console.WriteLine($"{nameof(FirstPromptFilter)}.{nameof(OnPromptRendering)} - ${context.Function.Name}");
+            Console.WriteLine($"{nameof(FirstPromptFilter)}.{nameof(OnPromptRendering)} - {context.Function.Name}");
 
         public void OnPromptRendered(PromptRenderedContext context) =>
-            Console.WriteLine($"{nameof(FirstPromptFilter)}.{nameof(OnPromptRendered)} - ${context.Function.Name}");
+            Console.WriteLine($"{nameof(FirstPromptFilter)}.{nameof(OnPromptRendered)} - {context.Function.Name}");
     }
 
     public static async Task RunAsync()
