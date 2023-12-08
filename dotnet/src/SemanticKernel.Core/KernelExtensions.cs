@@ -237,6 +237,27 @@ public static class KernelExtensions
 
         return plugins;
     }
+
+    public static IKernelBuilderFunctionFilters Add(this IKernelBuilderFunctionFilters functionFilters, IFunctionFilter functionFilter)
+    {
+        Verify.NotNull(functionFilters);
+        Verify.NotNull(functionFilter);
+
+        functionFilters.Services.AddSingleton(functionFilter);
+
+        return functionFilters;
+    }
+
+    public static IKernelBuilderPromptFilters Add(this IKernelBuilderPromptFilters promptFilters, IPromptFilter promptFilter)
+    {
+        Verify.NotNull(promptFilters);
+        Verify.NotNull(promptFilter);
+
+        promptFilters.Services.AddSingleton(promptFilter);
+
+        return promptFilters;
+    }
+
     #endregion
 
     #region ImportPlugin/AddFromObject

@@ -23,6 +23,10 @@ public sealed class KernelBuilder : IKernelBuilder
     /// <summary>A facade on top of <see cref="_services"/> for adding plugins to the services collection.</summary>
     private KernelBuilderPlugins? _plugins;
 
+    private KernelBuilderFunctionFilters? _functionFilters;
+
+    private KernelBuilderPromptFilters? _promptFilters;
+
     /// <summary>Initializes a new instance of the <see cref="KernelBuilder"/>.</summary>
     public KernelBuilder() { }
 
@@ -47,6 +51,10 @@ public sealed class KernelBuilder : IKernelBuilder
 
     /// <summary>Gets a builder for plugins to be built as services into the <see cref="Kernel"/>.</summary>
     public IKernelBuilderPlugins Plugins => this._plugins ??= new(this.Services);
+
+    public IKernelBuilderFunctionFilters FunctionFilters => this._functionFilters ??= new(this.Services);
+
+    public IKernelBuilderPromptFilters PromptFilters => this._promptFilters ??= new(this.Services);
 
     /// <summary>Constructs a new instance of <see cref="Kernel"/> using all of the settings configured on the builder.</summary>
     /// <returns>The new <see cref="Kernel"/> instance.</returns>
@@ -94,6 +102,20 @@ public sealed class KernelBuilder : IKernelBuilder
     private sealed class KernelBuilderPlugins : IKernelBuilderPlugins
     {
         public KernelBuilderPlugins(IServiceCollection services) => this.Services = services;
+
+        public IServiceCollection Services { get; }
+    }
+
+    private sealed class KernelBuilderFunctionFilters : IKernelBuilderFunctionFilters
+    {
+        public KernelBuilderFunctionFilters(IServiceCollection services) => this.Services = services;
+
+        public IServiceCollection Services { get; }
+    }
+
+    private sealed class KernelBuilderPromptFilters : IKernelBuilderPromptFilters
+    {
+        public KernelBuilderPromptFilters(IServiceCollection services) => this.Services = services;
 
         public IServiceCollection Services { get; }
     }

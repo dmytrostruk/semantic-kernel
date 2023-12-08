@@ -13,6 +13,10 @@ public interface IKernelBuilder
     /// <summary>Gets a builder for adding collections as singletons to <see cref="Services"/>.</summary>
     IKernelBuilderPlugins Plugins { get; }
 
+    IKernelBuilderFunctionFilters FunctionFilters { get; }
+
+    IKernelBuilderPromptFilters PromptFilters { get; }
+
     /// <summary>Constructs a new instance of <see cref="Kernel"/> using all of the settings configured on the builder.</summary>
     /// <returns>The new <see cref="Kernel"/> instance.</returns>
     /// <remarks>
@@ -24,6 +28,18 @@ public interface IKernelBuilder
 
 /// <summary>Provides a builder for adding plugins as singletons to a service collection.</summary>
 public interface IKernelBuilderPlugins
+{
+    /// <summary>Gets the collection of services to which plugins should be added.</summary>
+    IServiceCollection Services { get; }
+}
+
+public interface IKernelBuilderFunctionFilters
+{
+    /// <summary>Gets the collection of services to which plugins should be added.</summary>
+    IServiceCollection Services { get; }
+}
+
+public interface IKernelBuilderPromptFilters
 {
     /// <summary>Gets the collection of services to which plugins should be added.</summary>
     IServiceCollection Services { get; }

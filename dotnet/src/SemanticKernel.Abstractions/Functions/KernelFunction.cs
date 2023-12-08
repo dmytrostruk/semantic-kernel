@@ -127,8 +127,8 @@ public abstract class KernelFunction
             cancellationToken.ThrowIfCancellationRequested();
 
             // Invoke pre-invocation event handler. If it requests cancellation, throw.
-            var invokingEventArgs = kernel.OnFunctionInvoking(this, arguments);
-            if (invokingEventArgs?.Cancel is true)
+            var invokingContext = kernel.OnFunctionInvoking(this, arguments);
+            if (invokingContext?.Cancel is true)
             {
                 throw new OperationCanceledException($"A {nameof(Kernel)}.{nameof(Kernel.FunctionInvoking)} event handler requested cancellation before function invocation.");
             }
@@ -137,14 +137,14 @@ public abstract class KernelFunction
             functionResult = await this.InvokeCoreAsync(kernel, arguments, cancellationToken).ConfigureAwait(false);
 
             // Invoke the post-invocation event handler. If it requests cancellation, throw.
-            var invokedEventArgs = kernel.OnFunctionInvoked(this, arguments, functionResult);
-            if (invokedEventArgs is not null)
+            var invokedContext = kernel.OnFunctionInvoked(this, arguments, functionResult);
+            if (invokedContext is not null)
             {
                 // Apply any changes from the event handlers to final result.
-                functionResult = new FunctionResult(this, invokedEventArgs.ResultValue, functionResult.Culture, invokedEventArgs.Metadata ?? functionResult.Metadata);
+                functionResult = new FunctionResult(this, invokedContext.ResultValue, functionResult.Culture, invokedContext.Metadata ?? functionResult.Metadata);
             }
 
-            if (invokedEventArgs?.Cancel is true)
+            if (invokedContext?.Cancel is true)
             {
                 throw new OperationCanceledException($"A {nameof(Kernel)}.{nameof(Kernel.FunctionInvoked)} event handler requested cancellation after function invocation.");
             }
@@ -240,8 +240,8 @@ public abstract class KernelFunction
                 cancellationToken.ThrowIfCancellationRequested();
 
                 // Invoke pre-invocation event handler. If it requests cancellation, throw.
-                var invokingEventArgs = kernel.OnFunctionInvoking(this, arguments);
-                if (invokingEventArgs is not null && invokingEventArgs.Cancel)
+                var invokingContext = kernel.OnFunctionInvoking(this, arguments);
+                if (invokingContext?.Cancel is true)
                 {
                     throw new OperationCanceledException($"A {nameof(Kernel)}.{nameof(Kernel.FunctionInvoking)} event handler requested cancellation before function invocation.");
                 }
