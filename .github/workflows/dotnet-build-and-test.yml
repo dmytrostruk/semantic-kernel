@@ -110,10 +110,11 @@ jobs:
           OpenAI__ApiKey: ${{ secrets.OPENAI__APIKEY }}
 
       # Generate test reports and check coverage
+      - name: Install ReportGenerator
+        run: dotnet tool install -g dotnet-reportgenerator-globaltool
+
       - name: Generate test reports
         run: |
-          dotnet tool install -g dotnet-reportgenerator-globaltool
-
           $assemblies = @(
               "+Microsoft.SemanticKernel.Abstractions",
               "+Microsoft.SemanticKernel.Core",
