@@ -115,17 +115,16 @@ jobs:
 
       - name: Generate test reports
         run: |
-          $assemblies = @(
-              "+Microsoft.SemanticKernel.Abstractions",
-              "+Microsoft.SemanticKernel.Core",
-              "+Microsoft.SemanticKernel.PromptTemplates.Handlebars",
-              "+Microsoft.SemanticKernel.Connectors.OpenAI",
-              "+Microsoft.SemanticKernel.Yaml"
-          )
+          $assemblies = ""
 
-          $assemblyFilters = $assemblies -join ";"
+          # Add production assemblies
+          $assemblies += "+Microsoft.SemanticKernel.Abstractions;"
+          $assemblies += "+Microsoft.SemanticKernel.Core;"
+          $assemblies += "+Microsoft.SemanticKernel.PromptTemplates.Handlebars;"
+          $assemblies += "+Microsoft.SemanticKernel.Connectors.OpenAI;"
+          $assemblies += "+Microsoft.SemanticKernel.Yaml;"
 
-          reportgenerator "-reports:./TestResults/Coverage/**/coverage.cobertura.xml" "-targetdir:./TestResults/Reports" "-reporttypes:JsonSummary" "-assemblyfilters:$assemblyFilters"
+          reportgenerator "-reports:./TestResults/Coverage/**/coverage.cobertura.xml" "-targetdir:./TestResults/Reports" "-reporttypes:JsonSummary" "-assemblyfilters:$assemblies"
 
       - name: Check coverage
         run: |
