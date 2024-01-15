@@ -12,6 +12,9 @@ on:
   merge_group:
     branches: ["main"]
 
+env:
+  COVERAGE_THRESHOLD: 80
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -82,7 +85,7 @@ jobs:
         run: |
           export UT_PROJECTS=$(find ./dotnet -type f -name "*.UnitTests.csproj" | grep -v -E "(Planners.Core.UnitTests.csproj|Experimental.Orchestration.Flow.UnitTests.csproj|Experimental.Assistants.UnitTests.csproj)" | tr '\n' ' ')
           for project in $UT_PROJECTS; do
-            dotnet test -c ${{ matrix.configuration }} $project -v Normal --logger trx --collect:"XPlat Code Coverage" --results-directory:"TestResults/Coverage/"
+            dotnet test -c ${{ matrix.configuration }} $project --no-build -v Normal --logger trx --collect:"XPlat Code Coverage" --results-directory:"TestResults/Coverage/"
           done
 
       - name: Run Integration Tests
@@ -124,22 +127,27 @@ jobs:
         run: |
           $jsonReportPath = "TestResults/Reports/Summary.json"
           $jsonContent = Get-Content $jsonReportPath -Raw | ConvertFrom-Json
-          $coverageThreshold = 80
+          $coverageThreshold = $env:COVERAGE_THRESHOLD
+          $coverageBelowThreshold = $false
 
-          function GetValue($number) {
+          function GetFormattedValue($number) {
               $formattedNumber = "{0:N1}" -f $number
               $icon = if ($number -ge $coverageThreshold) { '✅' } else { '❌' }
               
               return "$formattedNumber% $icon"
           }
 
-          $lineCoverage = GetValue $jsonContent.summary.linecoverage
-          $branchCoverage = GetValue $jsonContent.summary.branchcoverage
+          $lineCoverage = $jsonContent.summary.linecoverage
+          $branchCoverage = $jsonContent.summary.branchcoverage
+
+          if ($lineCoverage -lt $coverageThreshold -or $branchCoverage -lt $coverageThreshold) {
+            $coverageBelowThreshold = $true
+          }
 
           $totalTableData = [PSCustomObject]@{
               'Metric'          = 'Total Coverage'
-              'Line Coverage'   = $lineCoverage
-              'Branch Coverage' = $branchCoverage
+              'Line Coverage'   = GetFormattedValue $lineCoverage
+              'Branch Coverage' = GetFormattedValue $branchCoverage
           }
 
           $totalTableData | Format-Table -AutoSize
@@ -148,17 +156,26 @@ jobs:
 
           foreach ($assembly in $jsonContent.coverage.assemblies) {
               $assemblyName = $assembly.name
-              $assemblyLineCoverage = GetValue $assembly.coverage
-              $assemblyBranchCoverage = GetValue $assembly.branchcoverage
+              $assemblyLineCoverage = $assembly.coverage
+              $assemblyBranchCoverage = $assembly.branchcoverage
+
+              if ($assemblyLineCoverage -lt $coverageThreshold -or $assemblyBranchCoverage -lt $coverageThreshold) {
+                $coverageBelowThreshold = $true
+              }
 
               $assemblyTableData += [PSCustomObject]@{
                   'Assembly Name'   = $assemblyName
-                  'Line Coverage'   = $assemblyLineCoverage
-                  'Branch Coverage' = $assemblyBranchCoverage
+                  'Line Coverage'   = GetFormattedValue $assemblyLineCoverage
+                  'Branch Coverage' = GetFormattedValue $assemblyBranchCoverage
               }
           }
 
           $assemblyTableData | Format-Table -AutoSize
+
+          if ($coverageBelowThreshold) {
+            Write-Host "Code coverage is lower than defined threshold. Stopping the task."
+            exit 1
+          }
 
   # This final job is required to satisfy the merge queue. It must only run (or succeed) if no tests failed
   dotnet-build-and-test-check:
