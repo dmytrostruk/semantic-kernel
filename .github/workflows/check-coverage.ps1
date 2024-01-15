@@ -40,15 +40,15 @@ foreach ($assembly in $jsonContent.coverage.assemblies) {
     }
 
     $assemblyTableData += [PSCustomObject]@{
-        'Assembly Name'   = $assemblyName
-        'Line Coverage'   = GetFormattedValue $assemblyLineCoverage
-        'Branch Coverage' = GetFormattedValue $assemblyBranchCoverage
+        'Assembly Name' = $assemblyName
+        'Line'          = GetFormattedValue $assemblyLineCoverage
+        'Branch'        = GetFormattedValue $assemblyBranchCoverage
     }
 }
 
 $assemblyTableData | Format-Table -AutoSize
 
 if ($coverageBelowThreshold) {
-    Write-Host "Code coverage is lower than defined threshold. Stopping the task."
+    Write-Host "Code coverage is lower than defined threshold: $CoverageThreshold. Stopping the task."
     exit 1
 }
