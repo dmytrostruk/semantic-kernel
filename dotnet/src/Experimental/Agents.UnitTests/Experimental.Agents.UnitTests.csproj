@@ -28,6 +28,7 @@
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="coverlet.msbuild" />
     <PackageReference Include="coverlet.collector">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
