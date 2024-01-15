@@ -110,24 +110,14 @@ jobs:
           OpenAI__ApiKey: ${{ secrets.OPENAI__APIKEY }}
 
       # Generate test reports and check coverage
-      - name: Install ReportGenerator
-        run: |
-          export PATH="$PATH:/github/home/.dotnet/tools"
-          dotnet tool install -g dotnet-reportgenerator-globaltool
-
       - name: Generate test reports
-        shell: pwsh
-        run: |
-          $assemblies = ""
-
-          # Add production assemblies
-          $assemblies += "+Microsoft.SemanticKernel.Abstractions;"
-          $assemblies += "+Microsoft.SemanticKernel.Core;"
-          $assemblies += "+Microsoft.SemanticKernel.PromptTemplates.Handlebars;"
-          $assemblies += "+Microsoft.SemanticKernel.Connectors.OpenAI;"
-          $assemblies += "+Microsoft.SemanticKernel.Yaml;"
-
-          & reportgenerator -reports:"./TestResults/Coverage/**/coverage.cobertura.xml" -targetdir:"./TestResults/Reports" -reporttypes:"JsonSummary" -assemblyfilters:$assemblies
+        uses: danielpalme/ReportGenerator-GitHub-Action@5.2.0
+        with:
+          reports: "./TestResults/Coverage/**/coverage.cobertura.xml"
+          targetdir: "./TestResults/Reports"
+          reporttypes: "JsonSummary"
+          # Report for production packages only
+          assemblyfilters: "+Microsoft.SemanticKernel.Abstractions;+Microsoft.SemanticKernel.Core;+Microsoft.SemanticKernel.PromptTemplates.Handlebars;+Microsoft.SemanticKernel.Connectors.OpenAI;+Microsoft.SemanticKernel.Yaml;"
 
       - name: Check coverage
         shell: pwsh
