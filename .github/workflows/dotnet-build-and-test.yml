@@ -111,7 +111,9 @@ jobs:
 
       # Generate test reports and check coverage
       - name: Install ReportGenerator
-        run: dotnet tool install -g dotnet-reportgenerator-globaltool
+        run: |
+          export PATH="$PATH:/github/home/.dotnet/tools"
+          dotnet tool install -g dotnet-reportgenerator-globaltool
 
       - name: Generate test reports
         shell: pwsh
