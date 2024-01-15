@@ -9,6 +9,8 @@
     <IsPackable>false</IsPackable>
     <LangVersion>12</LangVersion>
     <NoWarn>CA2007,CA1861,VSTHRD111,SKEXP0001,SKEXP0002,SKEXP0003,SKEXP0004,SKEXP0055</NoWarn>
+    <CollectCoverage>true</CollectCoverage>
+    <Threshold>80</Threshold>
   </PropertyGroup>
 
   <ItemGroup>
