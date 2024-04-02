@@ -33,9 +33,9 @@ public sealed class Kernel
     /// <summary>The collection of plugins, initialized via the constructor or lazily-initialized on first access via <see cref="Plugins"/>.</summary>
     private KernelPluginCollection? _plugins;
     /// <summary>The collection of function filters, initialized via the constructor or lazily-initialized on first access via <see cref="Plugins"/>.</summary>
-    private NonNullCollection<IFunctionFilter>? _functionFilters;
+    private NonNullCollection<IFunctionFilterBase>? _functionFilters;
     /// <summary>The collection of prompt filters, initialized via the constructor or lazily-initialized on first access via <see cref="Plugins"/>.</summary>
-    private NonNullCollection<IPromptFilter>? _promptFilters;
+    private NonNullCollection<IPromptFilterBase>? _promptFilters;
 
     /// <summary>
     /// Initializes a new instance of <see cref="Kernel"/>.
@@ -73,21 +73,7 @@ public sealed class Kernel
             }
         }
 
-        // Enumerate any function filters that may have been registered.
-        IEnumerable<IFunctionFilter> functionFilters = this.Services.GetServices<IFunctionFilter>();
-
-        if (functionFilters is not ICollection<IFunctionFilter> functionFilterCollection || functionFilterCollection.Count != 0)
-        {
-            this._functionFilters = new(functionFilters);
-        }
-
-        // Enumerate any prompt filters that may have been registered.
-        IEnumerable<IPromptFilter> promptFilters = this.Services.GetServices<IPromptFilter>();
-
-        if (promptFilters is not ICollection<IPromptFilter> promptFilterCollection || promptFilterCollection.Count != 0)
-        {
-            this._promptFilters = new(promptFilters);
-        }
+        this.InitializeFilters();
     }
 
     /// <summary>Creates a builder for constructing <see cref="Kernel"/> instances.</summary>
@@ -137,18 +123,18 @@ public sealed class Kernel
     /// Gets the collection of function filters available through the kernel.
     /// </summary>
     [Experimental("SKEXP0001")]
-    public IList<IFunctionFilter> FunctionFilters =>
+    public IList<IFunctionFilterBase> FunctionFilters =>
         this._functionFilters ??
-        Interlocked.CompareExchange(ref this._functionFilters, new NonNullCollection<IFunctionFilter>(), null) ??
+        Interlocked.CompareExchange(ref this._functionFilters, new NonNullCollection<IFunctionFilterBase>(), null) ??
         this._functionFilters;
 
     /// <summary>
     /// Gets the collection of function filters available through the kernel.
     /// </summary>
     [Experimental("SKEXP0001")]
-    public IList<IPromptFilter> PromptFilters =>
+    public IList<IPromptFilterBase> PromptFilters =>
         this._promptFilters ??
-        Interlocked.CompareExchange(ref this._promptFilters, new NonNullCollection<IPromptFilter>(), null) ??
+        Interlocked.CompareExchange(ref this._promptFilters, new NonNullCollection<IPromptFilterBase>(), null) ??
         this._promptFilters;
 
     /// <summary>
@@ -275,10 +261,35 @@ public sealed class Kernel
 
     #endregion
 
-    #region Internal Filtering
+    #region Filtering
+
+    private void InitializeFilters()
+    {
+        // Enumerate any function filters that may have been registered.
+        IEnumerable<IAsyncFunctionFilter> asyncFunctionFilters = this.Services.GetServices<IAsyncFunctionFilter>();
+        IEnumerable<IFunctionFilter> syncFunctionFilters = this.Services.GetServices<IFunctionFilter>();
+
+        IEnumerable<IFunctionFilterBase> functionFilters = asyncFunctionFilters.Concat<IFunctionFilterBase>(syncFunctionFilters);
+
+        if (functionFilters.IsNotEmpty())
+        {
+            this._functionFilters = new(functionFilters);
+        }
+
+        // Enumerate any prompt filters that may have been registered.
+        IEnumerable<IAsyncPromptFilter> asyncPromptFilters = this.Services.GetServices<IAsyncPromptFilter>();
+        IEnumerable<IPromptFilter> syncPromptFilters = this.Services.GetServices<IPromptFilter>();
+
+        IEnumerable<IPromptFilterBase> promptFilters = asyncPromptFilters.Concat<IPromptFilterBase>(syncPromptFilters);
+
+        if (promptFilters.IsNotEmpty())
+        {
+            this._promptFilters = new(promptFilters);
+        }
+    }
 
     [Experimental("SKEXP0001")]
-    internal FunctionInvokingContext? OnFunctionInvokingFilter(KernelFunction function, KernelArguments arguments)
+    internal async Task<FunctionInvokingContext?> OnFunctionInvokingFilterAsync(KernelFunction function, KernelArguments arguments)
     {
         FunctionInvokingContext? context = null;
 
@@ -288,7 +299,14 @@ public sealed class Kernel
 
             for (int i = 0; i < this._functionFilters.Count; i++)
             {
-                this._functionFilters[i].OnFunctionInvoking(context);
+                if (this._functionFilters[i] is IAsyncFunctionFilter asyncFunctionFilter)
+                {
+                    await asyncFunctionFilter.OnFunctionInvokingAsync(context).ConfigureAwait(false);
+                }
+                else if (this._functionFilters[i] is IFunctionFilter syncFunctionFilter)
+                {
+                    syncFunctionFilter.OnFunctionInvoking(context);
+                }
             }
         }
 
@@ -296,7 +314,7 @@ public sealed class Kernel
     }
 
     [Experimental("SKEXP0001")]
-    internal FunctionInvokedContext? OnFunctionInvokedFilter(KernelArguments arguments, FunctionResult result, Exception? exception = null)
+    internal async Task<FunctionInvokedContext?> OnFunctionInvokedFilterAsync(KernelArguments arguments, FunctionResult result, Exception? exception = null)
     {
         FunctionInvokedContext? context = null;
 
@@ -308,7 +326,14 @@ public sealed class Kernel
 
             for (int i = 0; i < this._functionFilters.Count; i++)
             {
-                this._functionFilters[i].OnFunctionInvoked(context);
+                if (this._functionFilters[i] is IAsyncFunctionFilter asyncFunctionFilter)
+                {
+                    await asyncFunctionFilter.OnFunctionInvokedAsync(context).ConfigureAwait(false);
+                }
+                else if (this._functionFilters[i] is IFunctionFilter syncFunctionFilter)
+                {
+                    syncFunctionFilter.OnFunctionInvoked(context);
+                }
             }
         }
 
@@ -316,7 +341,7 @@ public sealed class Kernel
     }
 
     [Experimental("SKEXP0001")]
-    internal PromptRenderingContext? OnPromptRenderingFilter(KernelFunction function, KernelArguments arguments)
+    internal async Task<PromptRenderingContext?> OnPromptRenderingFilterAsync(KernelFunction function, KernelArguments arguments)
     {
         PromptRenderingContext? context = null;
 
@@ -326,7 +351,14 @@ public sealed class Kernel
 
             for (int i = 0; i < this._promptFilters.Count; i++)
             {
-                this._promptFilters[i].OnPromptRendering(context);
+                if (this._promptFilters[i] is IAsyncPromptFilter asyncPromptFilter)
+                {
+                    await asyncPromptFilter.OnPromptRenderingAsync(context).ConfigureAwait(false);
+                }
+                else if (this._promptFilters[i] is IPromptFilter syncPromptFilter)
+                {
+                    syncPromptFilter.OnPromptRendering(context);
+                }
             }
         }
 
@@ -334,7 +366,7 @@ public sealed class Kernel
     }
 
     [Experimental("SKEXP0001")]
-    internal PromptRenderedContext? OnPromptRenderedFilter(KernelFunction function, KernelArguments arguments, string renderedPrompt)
+    internal async Task<PromptRenderedContext?> OnPromptRenderedFilterAsync(KernelFunction function, KernelArguments arguments, string renderedPrompt)
     {
         PromptRenderedContext? context = null;
 
@@ -344,7 +376,14 @@ public sealed class Kernel
 
             for (int i = 0; i < this._promptFilters.Count; i++)
             {
-                this._promptFilters[i].OnPromptRendered(context);
+                if (this._promptFilters[i] is IAsyncPromptFilter asyncPromptFilter)
+                {
+                    await asyncPromptFilter.OnPromptRenderedAsync(context).ConfigureAwait(false);
+                }
+                else if (this._promptFilters[i] is IPromptFilter syncPromptFilter)
+                {
+                    syncPromptFilter.OnPromptRendered(context);
+                }
             }
         }
 

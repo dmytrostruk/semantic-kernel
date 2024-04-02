@@ -1,24 +1,25 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Threading.Tasks;
 
 namespace Microsoft.SemanticKernel;
 
 /// <summary>
-/// Interface for filtering actions during prompt rendering.
+/// Interface for asynchronous filtering actions during prompt rendering.
 /// </summary>
 [Experimental("SKEXP0001")]
-public interface IPromptFilter : IPromptFilterBase
+public interface IAsyncPromptFilter : IPromptFilterBase
 {
     /// <summary>
     /// Method which is executed before prompt rendering.
     /// </summary>
     /// <param name="context">Data related to prompt before rendering.</param>
-    void OnPromptRendering(PromptRenderingContext context);
+    Task OnPromptRenderingAsync(PromptRenderingContext context);
 
     /// <summary>
     /// Method which is executed after prompt rendering.
     /// </summary>
     /// <param name="context">Data related to prompt after rendering.</param>
-    void OnPromptRendered(PromptRenderedContext context);
+    Task OnPromptRenderedAsync(PromptRenderedContext context);
 }

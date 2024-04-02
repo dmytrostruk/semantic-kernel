@@ -322,7 +322,7 @@ internal sealed class KernelFunctionFromPrompt : KernelFunction
 
         Verify.NotNull(aiService);
 
-        kernel.OnPromptRenderingFilter(this, arguments);
+        await kernel.OnPromptRenderingFilterAsync(this, arguments).ConfigureAwait(false);
 
         var renderedPrompt = await this._promptTemplate.RenderAsync(kernel, arguments, cancellationToken).ConfigureAwait(false);
 
@@ -331,7 +331,7 @@ internal sealed class KernelFunctionFromPrompt : KernelFunction
             this._logger.LogTrace("Rendered prompt: {Prompt}", renderedPrompt);
         }
 
-        var renderedContext = kernel.OnPromptRenderedFilter(this, arguments, renderedPrompt);
+        var renderedContext = await kernel.OnPromptRenderedFilterAsync(this, arguments, renderedPrompt).ConfigureAwait(false);
 
         if (renderedContext is not null &&
             !renderedContext.Cancel &&
