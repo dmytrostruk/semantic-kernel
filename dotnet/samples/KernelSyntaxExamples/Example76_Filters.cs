@@ -27,13 +27,13 @@ public class Example76_Filters : BaseTest
         builder.Services.AddSingleton<ITestOutputHelper>(this.Output);
 
         // Add filters with DI
-        builder.Services.AddSingleton<IFunctionFilter, FirstFunctionFilter>();
-        builder.Services.AddSingleton<IFunctionFilter, SecondFunctionFilter>();
+        builder.Services.AddSingleton<IAsyncFunctionFilter, AsyncFunctionFilter>();
+        builder.Services.AddSingleton<IFunctionFilter, FunctionFilter>();
 
         var kernel = builder.Build();
 
         // Add filter without DI
-        kernel.PromptFilters.Add(new FirstPromptFilter(this.Output));
+        kernel.PromptFilters.Add(new PromptFilter(this.Output));
 
         var function = kernel.CreateFunctionFromPrompt("What is Seattle", functionName: "MyFunction");
         kernel.Plugins.Add(KernelPluginFactory.CreateFromFunctions("MyPlugin", functions: new[] { function }));
@@ -48,52 +48,58 @@ public class Example76_Filters : BaseTest
 
     #region Filters
 
-    private sealed class FirstFunctionFilter : IFunctionFilter
+    private sealed class FunctionFilter : IFunctionFilter
     {
         private readonly ITestOutputHelper _output;
 
-        public FirstFunctionFilter(ITestOutputHelper output)
+        public FunctionFilter(ITestOutputHelper output)
         {
             this._output = output;
         }
 
         public void OnFunctionInvoking(FunctionInvokingContext context) =>
-            this._output.WriteLine($"{nameof(FirstFunctionFilter)}.{nameof(OnFunctionInvoking)} - {context.Function.PluginName}.{context.Function.Name}");
+            this._output.WriteLine($"{nameof(FunctionFilter)}.{nameof(OnFunctionInvoking)} - {context.Function.PluginName}.{context.Function.Name}");
 
         public void OnFunctionInvoked(FunctionInvokedContext context) =>
-            this._output.WriteLine($"{nameof(FirstFunctionFilter)}.{nameof(OnFunctionInvoked)} - {context.Function.PluginName}.{context.Function.Name}");
+            this._output.WriteLine($"{nameof(FunctionFilter)}.{nameof(OnFunctionInvoked)} - {context.Function.PluginName}.{context.Function.Name}");
     }
 
-    private sealed class SecondFunctionFilter : IFunctionFilter
+    private sealed class AsyncFunctionFilter : IAsyncFunctionFilter
     {
         private readonly ITestOutputHelper _output;
 
-        public SecondFunctionFilter(ITestOutputHelper output)
+        public AsyncFunctionFilter(ITestOutputHelper output)
         {
             this._output = output;
         }
 
-        public void OnFunctionInvoking(FunctionInvokingContext context) =>
-            this._output.WriteLine($"{nameof(SecondFunctionFilter)}.{nameof(OnFunctionInvoking)} - {context.Function.PluginName}.{context.Function.Name}");
+        public async Task OnFunctionInvokingAsync(FunctionInvokingContext context)
+        {
+            await Task.Delay(10);
+            this._output.WriteLine($"{nameof(AsyncFunctionFilter)}.{nameof(OnFunctionInvokingAsync)} - {context.Function.PluginName}.{context.Function.Name}");
+        }
 
-        public void OnFunctionInvoked(FunctionInvokedContext context) =>
-            this._output.WriteLine($"{nameof(SecondFunctionFilter)}.{nameof(OnFunctionInvoked)} - {context.Function.PluginName}.{context.Function.Name}");
+        public async Task OnFunctionInvokedAsync(FunctionInvokedContext context)
+        {
+            await Task.Delay(10);
+            this._output.WriteLine($"{nameof(AsyncFunctionFilter)}.{nameof(OnFunctionInvokedAsync)} - {context.Function.PluginName}.{context.Function.Name}");
+        }
     }
 
-    private sealed class FirstPromptFilter : IPromptFilter
+    private sealed class PromptFilter : IPromptFilter
     {
         private readonly ITestOutputHelper _output;
 
-        public FirstPromptFilter(ITestOutputHelper output)
+        public PromptFilter(ITestOutputHelper output)
         {
             this._output = output;
         }
 
         public void OnPromptRendering(PromptRenderingContext context) =>
-            this._output.WriteLine($"{nameof(FirstPromptFilter)}.{nameof(OnPromptRendering)} - {context.Function.PluginName}.{context.Function.Name}");
+            this._output.WriteLine($"{nameof(PromptFilter)}.{nameof(OnPromptRendering)} - {context.Function.PluginName}.{context.Function.Name}");
 
         public void OnPromptRendered(PromptRenderedContext context) =>
-            this._output.WriteLine($"{nameof(FirstPromptFilter)}.{nameof(OnPromptRendered)} - {context.Function.PluginName}.{context.Function.Name}");
+            this._output.WriteLine($"{nameof(PromptFilter)}.{nameof(OnPromptRendered)} - {context.Function.PluginName}.{context.Function.Name}");
     }
 
     #endregion
