@@ -45,7 +45,6 @@ jobs:
       - name: not dotnet tests
         if: steps.filter.outputs.dotnet != 'true'
         run: echo "NOT dotnet file"
-  # .NET 8
   dotnet-build-and-test:
     needs: paths-filter
     if: needs.paths-filter.outputs.dotnetChanges == 'true'
@@ -132,21 +131,6 @@ jobs:
       - name: Check coverage
         shell: pwsh
         run: .github/workflows/check-coverage.ps1 -JsonReportPath "TestResults/Reports/Summary.json" -CoverageThreshold $env:COVERAGE_THRESHOLD
-  # .NET Framework
-  dotnet-framework-build-and-test:
-    needs: paths-filter
-    if: needs.paths-filter.outputs.dotnetChanges == 'true'
-    runs-on: windows-2019
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v1.3.1
-      - name: Setup NuGet
-        uses: NuGet/setup-nuget@v1.2.0
-      - name: Restore NuGet packages
-        shell: bash
-        run: |
-          dotnet --list-sdks
   # This final job is required to satisfy the merge queue. It must only run (or succeed) if no tests failed
   dotnet-build-and-test-check:
     if: always()
