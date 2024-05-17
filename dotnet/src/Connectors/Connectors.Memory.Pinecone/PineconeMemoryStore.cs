@@ -305,7 +305,6 @@ public class PineconeMemoryStore : IPineconeMemoryStore
     /// <param name="indexNamespace"> The namespace associated with the Pinecone vector record to get.</param>
     /// <param name="withEmbedding">If true, the embedding will be returned in the memory record.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns></returns>
     /// <exception cref="KernelException"></exception>
     public async IAsyncEnumerable<MemoryRecord?> GetWithDocumentIdAsync(string indexName,
         string documentId,
