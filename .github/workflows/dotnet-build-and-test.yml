@@ -146,10 +146,7 @@ jobs:
       - name: Restore NuGet packages
         shell: bash
         run: |
-          export SOLUTIONS=$(find ./dotnet/ -type f -name "*.sln" | tr '\n' ' ')
-          for solution in $SOLUTIONS; do
-            nuget restore $solution
-          done
+          nuget restore ./dotnet/SK-dotnet.sln
   # This final job is required to satisfy the merge queue. It must only run (or succeed) if no tests failed
   dotnet-build-and-test-check:
     if: always()
