@@ -2,7 +2,7 @@
 # These are optional elements. Feel free to remove any of them.
 status: proposed
 contact: dmytrostruk
-date: 2024-08-19
+date: 2024-08-20
 deciders: sergeymenshykh, markwallace, rbarreto, westey-m
 ---
 
