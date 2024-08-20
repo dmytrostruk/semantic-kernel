@@ -1,9 +1,9 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
-using System.Collections.Generic;
-using System.Linq.Expressions;
-using System.Linq;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
 
 namespace Microsoft.SemanticKernel.Connectors.EntityFramework;
 
