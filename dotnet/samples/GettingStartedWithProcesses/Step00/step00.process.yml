@@ -1,0 +1,69 @@
+workflow:
+  format_version: "1.0" # The version of the declarative spec being used to define this workflow.
+  workflow_version: "1.5" # The version of the workflow itself.
+  name: chatbot
+  nodes:
+    - id: StartStep
+      type: declarative
+      version: "1.0"
+      description: "Initial step of the chatbot process."
+      on_complete:
+        - on_condition:
+            type: default
+            emits:
+              - event_type: StartCompleted
+
+    - id: DoSomeWorkStep
+      type: declarative
+      version: "1.0"
+      description: "Performs some work in the chatbot process."
+      on_complete:
+        - on_condition:
+            type: default
+            emits:
+              - event_type: DoSomeWorkCompleted
+
+    - id: DoMoreWorkStep
+      type: declarative
+      version: "1.0"
+      description: "Performs additional work in the chatbot process."
+      on_complete:
+        - on_condition:
+            type: default
+            emits:
+              - event_type: DoMoreWorkCompleted
+
+    - id: LastStep
+      type: declarative
+      version: "1.0"
+      description: "Final step of the chatbot process."
+      on_complete:
+        - on_condition:
+            type: default
+            emits:
+              - event_type: ProcessCompleted
+
+  orchestration:
+    # The entry point for the workflow is a message received event.
+    - listen_for:
+        event: "input_message_received"
+      then:
+        - node: StartStep
+
+    - listen_for:
+        event: "StartCompleted"
+        from: StartStep
+      then:
+        - node: DoSomeWorkStep
+
+    - listen_for:
+        event: "DoSomeWorkCompleted"
+        from: DoSomeWorkStep
+      then:
+        - node: DoMoreWorkStep
+
+    - listen_for:
+        event: "DoMoreWorkCompleted"
+        from: DoMoreWorkStep
+      then:
+        - node: LastStep
